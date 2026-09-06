@@ -141,6 +141,7 @@ export default function PlannerSection() {
           isNavigating={liveNavState.isNavigating}
           userLocation={liveNavState.userLocation}
           routeData={liveNavState.routeData}
+          activeRouteLine={liveNavState.activeRouteLine}
           activePandal={liveNavState.activePandal}
         />
         {liveNavState.isNavigating && (

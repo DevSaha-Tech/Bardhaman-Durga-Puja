@@ -51,9 +51,11 @@ function AutoCenterMap({ position, isNavigating }) {
   
   useEffect(() => {
     if (isNavigating && position) {
-      map.flyTo(position, 18, {
+      // Use setView with animate instead of flyTo to prevent camera shaking
+      // on rapid GPS updates
+      map.setView(position, map.getZoom() > 16 ? map.getZoom() : 18, {
         animate: true,
-        duration: 1.5, // smooth pan
+        duration: 0.5, // much faster smooth pan for real-time tracking
       });
     }
   }, [position, isNavigating, map]);
@@ -70,6 +72,7 @@ export default function MapView({
   isNavigating = false,
   userLocation = null,
   routeData = null,
+  activeRouteLine = null, // Sliced line ahead of user
   activePandal = null
 }) {
   const { lang, t } = useLanguage();
@@ -86,8 +89,12 @@ export default function MapView({
     ...(selectedRoute.length > 0 ? [liveCenter] : []) // Returns to start!
   ];
 
-  // Extract OSRM snapped geometry for Live Navigation Mode
-  const osrmPolyline = routeData?.geometry?.coordinates?.map(c => [c[1], c[0]]) || [];
+  // Extract OSRM snapped geometry for Live Navigation Mode.
+  // Prefer the sliced activeRouteLine (which trims the path behind the user).
+  // Turf returns [lng, lat], Leaflet needs [lat, lng], so we map it.
+  const osrmPolyline = activeRouteLine 
+    ? activeRouteLine.map(c => [c[1], c[0]])
+    : routeData?.geometry?.coordinates?.map(c => [c[1], c[0]]) || [];
 
   return (
     <MapContainer 
@@ -99,8 +106,8 @@ export default function MapView({
       className="z-0"
     >
       <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, Tiles style by <a href="https://www.hotosm.org/">HOT</a>'
         maxZoom={19}
       />
       

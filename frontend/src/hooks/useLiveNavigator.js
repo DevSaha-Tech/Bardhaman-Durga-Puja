@@ -8,7 +8,8 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
   const [isNavigating, setIsNavigating] = useState(false);
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
   const [userLocation, setUserLocation] = useState(null);
-  const [routeData, setRouteData] = useState(null); // The OSRM route object
+  const [routeData, setRouteData] = useState(null); // Full original OSRM route
+  const [activeRouteLine, setActiveRouteLine] = useState(null); // Sliced line for rendering
   const [currentManeuver, setCurrentManeuver] = useState(null);
   const [distanceToTarget, setDistanceToTarget] = useState(null);
   const [isVoiceMuted, setIsVoiceMuted] = useState(false);
@@ -160,13 +161,32 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
         }
       }
 
-      // Snap location
+      // Snap location & Slice Line & Detect Off-Route
       if (currentRouteData && currentRouteData.geometry) {
         try {
            const line = turf.lineString(currentRouteData.geometry.coordinates);
-           const snappedCoords = snapToRoute([rawLat, rawLng], line);
-           setUserLocation({ lat: snappedCoords[0], lng: snappedCoords[1], heading });
+           const rawPoint = turf.point([rawLng, rawLat]);
+           const snappedPoint = turf.nearestPointOnLine(line, rawPoint);
+           const snappedCoords = snappedPoint.geometry.coordinates; // [lng, lat]
+           
+           // 1. Off-Route Detection (if > 40 meters from snapped point)
+           const distFromRoute = turf.distance(rawPoint, snappedPoint) * 1000;
+           if (distFromRoute > 40 && !isFetchingRef.current) {
+             console.warn('Off-route detected:', distFromRoute, 'meters');
+             clearRouteCache();
+             setRouteData(null);
+             routeDataRef.current = null;
+             return; // Skip rest, next GPS tick will fetch fresh route!
+           }
+
+           // 2. Slice line from current location to target
+           const targetPoint = turf.point([activePandal.lng, activePandal.lat]);
+           const slicedLine = turf.lineSlice(snappedPoint, targetPoint, line);
+           setActiveRouteLine(slicedLine.geometry.coordinates);
+
+           setUserLocation({ lat: snappedCoords[1], lng: snappedCoords[0], heading });
         } catch(e) {
+           console.error('Turf slicing error:', e);
            setUserLocation({ lat: rawLat, lng: rawLng, heading });
         }
       } else {
@@ -198,6 +218,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
   useEffect(() => {
     if (activePandal) {
       setRouteData(null);
+      setActiveRouteLine(null);
       routeDataRef.current  = null;
       isFetchingRef.current = false;
       clearRouteCache();
@@ -216,6 +237,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
     userLocation,
     distanceToTarget,
     routeData,
+    activeRouteLine,
     startTour,
     endTour,
     skipToNext,
