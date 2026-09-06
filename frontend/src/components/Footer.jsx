@@ -34,8 +34,8 @@ export default function Footer() {
                   <Phone className="w-4 h-4 text-amber-500" />
                 </div>
                 <div>
-                  <span className="block text-stone-400 text-xs">{t('foot_police')}</span>
-                  <span className="text-white font-medium font-sans">100 / 112</span>
+                  <span className="block text-stone-400 text-xs">বর্ধমান সদর থানা (Police)</span>
+                  <span className="text-white font-medium font-sans">0342-2662495 / 112</span>
                 </div>
               </li>
               <li className="flex items-center gap-3 text-sm">
@@ -43,8 +43,26 @@ export default function Footer() {
                   <Phone className="w-4 h-4 text-amber-500" />
                 </div>
                 <div>
-                  <span className="block text-stone-400 text-xs">{t('foot_hospital')}</span>
-                  <span className="text-white font-medium font-sans">102 / 0342-2662788</span>
+                  <span className="block text-stone-400 text-xs">বর্ধমান মেডিকেল কলেজ ও হাসপাতাল (BMCH)</span>
+                  <span className="text-white font-medium font-sans">0342-2665212 / 102</span>
+                </div>
+              </li>
+              <li className="flex items-center gap-3 text-sm">
+                <div className="p-2 bg-stone-800 rounded-full">
+                  <Phone className="w-4 h-4 text-amber-500" />
+                </div>
+                <div>
+                  <span className="block text-stone-400 text-xs">অগ্নি নির্বাপক কেন্দ্র (Fire Station)</span>
+                  <span className="text-white font-medium font-sans">0342-2560333 / 101</span>
+                </div>
+              </li>
+              <li className="flex items-center gap-3 text-sm">
+                <div className="p-2 bg-stone-800 rounded-full">
+                  <Phone className="w-4 h-4 text-amber-500" />
+                </div>
+                <div>
+                  <span className="block text-stone-400 text-xs">জরুরি অ্যাম্বুলেন্স</span>
+                  <span className="text-white font-medium font-sans">108 / 102</span>
                 </div>
               </li>
             </ul>
@@ -56,8 +74,10 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-stone-500">
           <p>© 2026 Puja Parikrama (Bardhaman). All rights reserved.</p>
           
-          <div className="flex items-center gap-1 font-medium text-stone-400">
-            Made with <Heart className="w-3 h-3 text-red-600 fill-red-600 mx-1 animate-pulse" /> by <a href="https://devsaha.tech" target="_blank" rel="noopener noreferrer" className="text-amber-500 hover:text-amber-400 underline decoration-amber-500/30 underline-offset-4 transition-colors font-bold">DevSaha Tech</a>
+          <div className="flex flex-col items-center sm:flex-row gap-1 font-medium text-stone-400">
+            <span>Made with <Heart className="w-3 h-3 text-red-600 fill-red-600 inline mx-1 animate-pulse" /> by <a href="https://devsaha.tech" target="_blank" rel="noopener noreferrer" className="text-amber-500 hover:text-amber-400 underline decoration-amber-500/30 underline-offset-4 transition-colors font-bold">DevSaha Tech</a></span>
+            <span className="hidden sm:inline">|</span>
+            <a href="mailto:info@devsaha.tech" className="text-amber-500 hover:text-amber-400">info@devsaha.tech</a>
           </div>
           
           <a href="#" className="hover:text-amber-500 transition-colors">

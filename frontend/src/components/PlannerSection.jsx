@@ -15,6 +15,7 @@ import { generateGoogleMapsUrl } from '../utils/navigationUrl';
 import { useLiveNavigator } from '../hooks/useLiveNavigator';
 import LiveNavigationHUD from './LiveNavigationHUD';
 import { useLanguage } from '@/context/LanguageContext';
+import TrendsPanel from './TrendsPanel';
 
 // Dynamically import MapView with SSR disabled
 const MapView = dynamic(() => import('./MapView'), {
@@ -70,6 +71,23 @@ export default function PlannerSection() {
   const [budgetMin,     setBudgetMin]     = useState(240);
   const [transportMode, setTransportMode] = useState('walking');
   const [manualPandals, setManualPandals] = useState([]);
+  const [liveCounts, setLiveCounts] = useState({});
+
+  // Socket.io connection for live visitor counts
+  useEffect(() => {
+    import('socket.io-client').then(({ io }) => {
+      const socket = io('http://localhost:5000');
+      
+      socket.on('visitor_count_updated', (data) => {
+        setLiveCounts(prev => ({
+          ...prev,
+          [data.pandalId]: data.liveCount
+        }));
+      });
+
+      return () => socket.disconnect();
+    }).catch(err => console.error("Socket IO import error", err));
+  }, []);
 
   // Fetch data
   useEffect(() => {
@@ -105,7 +123,9 @@ export default function PlannerSection() {
       return { optimizedRoute: selected.length > 0 ? [...selected, END_NODE] : [], stats: itin, trimMessage: trimMsg };
     }
 
-    // manual
+    // manual or trends (trends doesn't build route)
+    if (plannerTab === 'trends') return { optimizedRoute: [], stats: null, trimMessage: null };
+
     return buildRoute(manualPandals);
   }, [pandalsData, plannerTab, topN, budgetMin, transportMode, manualPandals]);
 
@@ -143,6 +163,7 @@ export default function PlannerSection() {
           routeData={liveNavState.routeData}
           activeRouteLine={liveNavState.activeRouteLine}
           activePandal={liveNavState.activePandal}
+          liveCounts={liveCounts}
         />
         {liveNavState.isNavigating && (
           <LiveNavigationHUD navState={liveNavState} totalStops={optimizedRoute.length} />
@@ -193,6 +214,7 @@ export default function PlannerSection() {
                 { id: 'top',    label: lang === 'en' ? 'Top Picks' : 'সেরা মণ্ডপ' },
                 { id: 'budget', label: lang === 'en' ? 'Time Budget' : 'সময় অনুযায়ী' },
                 { id: 'manual', label: lang === 'en' ? 'Custom' : 'নিজে বাছুন' },
+                { id: 'trends', label: 'ট্রেন্ডিং' },
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -246,6 +268,11 @@ export default function PlannerSection() {
                   </button>
                 ))}
               </div>
+            )}
+
+            {/* Trends Panel */}
+            {plannerTab === 'trends' && (
+              <TrendsPanel />
             )}
 
             {/* Trim Badge */}

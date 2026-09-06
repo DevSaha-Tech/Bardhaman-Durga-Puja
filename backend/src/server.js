@@ -1,7 +1,12 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
+const connectDB = require('./config/db');
+
+// Connect to Database
+connectDB();
 
 const app = express();
 const server = http.createServer(app);
@@ -12,12 +17,20 @@ const io = new Server(server, {
   }
 });
 
+// Make io accessible to our router
+app.set('io', io);
+
 // Middleware
 app.use(cors());
 app.use(express.json());
 
 const pandalRoutes = require('./routes/pandalRoutes');
+const trendRoutes = require('./routes/trendRoutes');
+const feedbackRoutes = require('./routes/feedbackRoutes');
+
 app.use('/api/pandals', pandalRoutes);
+app.use('/api/trends', trendRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // Basic Health Check Endpoint
 app.get('/api/health', (req, res) => {
@@ -28,7 +41,6 @@ app.get('/api/health', (req, res) => {
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  // Future procession tracking can be added here
   socket.on('disconnect', () => {
     console.log(`User disconnected: ${socket.id}`);
   });
