@@ -2,6 +2,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
 import { LanguageProvider } from '@/context/LanguageContext';
+import SiteTracker from '@/components/SiteTracker';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,6 +36,7 @@ export default function RootLayout({ children }) {
     >
       <body suppressHydrationWarning className="min-h-full flex flex-col">
         <LanguageProvider>
+          <SiteTracker />
           {children}
         </LanguageProvider>
       </body>

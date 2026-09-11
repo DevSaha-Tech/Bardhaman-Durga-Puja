@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from 'react';
 import { X, Send } from 'lucide-react';
 
@@ -10,21 +12,23 @@ export default function ReviewModal({ pandalId, pandalName, onClose }) {
   const tags = [
     { id: 'long_line', label: 'দীর্ঘ লাইন' },
     { id: 'best_light', label: 'সেরা আলোকসজ্জা' },
+    { id: 'worst_management', label: 'খারাপ ব্যবস্থাপনা' },
+    { id: 'spacious', label: 'ভিড় কম' },
     { id: 'great_idol', label: 'সুন্দর প্রতিমা' },
-    { id: 'spacious', label: 'ভিড় কম' },
-    { id: 'worst_management', label: 'বাজে ম্যানেজমেন্ট' }
+    { id: 'general', label: 'সাধারণ' }
   ];
 
   const handleSubmit = async () => {
-    if (!comment) return;
+    if (!comment.trim()) return;
     setIsSubmitting(true);
     try {
-      await fetch(`http://localhost:5000/api/pandals/${pandalId}/reviews`, {
+      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000';
+      await fetch(`${socketUrl}/api/pandals/${pandalId}/reviews`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tag: selectedTag,
-          comment,
+          comment: comment.trim(),
           userName: 'দর্শনার্থী'
         })
       });
@@ -56,8 +60,8 @@ export default function ReviewModal({ pandalId, pandalName, onClose }) {
                   onClick={() => setSelectedTag(t.id)}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                     selectedTag === t.id 
-                      ? 'bg-amber-500 text-white' 
-                      : 'bg-stone-100 text-stone-600 border border-stone-200'
+                      ? 'bg-red-700 text-white' 
+                      : 'bg-stone-100 text-stone-600 border border-stone-200 hover:border-red-300 hover:text-red-700'
                   }`}
                 >
                   {t.label}
@@ -66,7 +70,7 @@ export default function ReviewModal({ pandalId, pandalName, onClose }) {
             </div>
             
             <textarea
-              className="w-full bg-stone-50 border border-stone-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none mb-4 resize-none h-24"
+              className="w-full bg-stone-50 border border-stone-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-red-500 outline-none mb-4 resize-none h-24"
               placeholder="আপনার অভিজ্ঞতা শেয়ার করুন..."
               value={comment}
               onChange={e => setComment(e.target.value)}
@@ -74,7 +78,7 @@ export default function ReviewModal({ pandalId, pandalName, onClose }) {
 
             <button
               onClick={handleSubmit}
-              disabled={isSubmitting || !comment}
+              disabled={isSubmitting || !comment.trim()}
               className="w-full py-3 bg-red-700 hover:bg-red-800 disabled:opacity-50 text-white rounded-xl font-bold flex items-center justify-center gap-2"
             >
               {isSubmitting ? 'সাবমিট হচ্ছে...' : (

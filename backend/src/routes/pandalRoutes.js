@@ -3,7 +3,7 @@ const router = express.Router();
 const VisitorLog = require('../models/VisitorLog');
 const Review = require('../models/Review');
 
-// Check-in (Add to VisitorLog) and emit updated count
+// Check-in (Add to VisitorLog)
 router.post('/:id/checkin', async (req, res) => {
   try {
     const pandalId = req.params.id;
@@ -18,12 +18,6 @@ router.post('/:id/checkin', async (req, res) => {
       pandalId,
       visitedAt: { $gte: twoHoursAgo }
     });
-
-    // Emit event to all connected clients
-    const io = req.app.get('io');
-    if (io) {
-      io.emit('visitor_count_updated', { pandalId, liveCount });
-    }
 
     res.status(201).json({ success: true, liveCount });
   } catch (error) {

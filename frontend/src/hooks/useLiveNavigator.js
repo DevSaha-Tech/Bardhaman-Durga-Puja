@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as turf from '@turf/turf';
 import { fetchOSRMRoute, parseManeuver, snapToRoute, clearRouteCache } from '../utils/navigationEngine';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 export function useLiveNavigator(optimizedRoute, lang, t) {
   const [isNavigating, setIsNavigating] = useState(false);
@@ -14,12 +15,53 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
   const [distanceToTarget, setDistanceToTarget] = useState(null);
   const [isVoiceMuted, setIsVoiceMuted] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [osrmError, setOsrmError] = useState(false);
 
   const wakeLockRef = useRef(null);
   const watchIdRef = useRef(null);
   const lastSpokenManeuverRef = useRef('');
+  const socketRef = useRef(null);
+  const pollingIntervalRef = useRef(null);
+  const liveCountsRef = useRef({});
 
   const activePandal = optimizedRoute[currentStopIndex] || null;
+
+  // Polling fallback for live visitor counts
+  useEffect(() => {
+    const pollCounts = async () => {
+      try {
+        if (isSupabaseConfigured) {
+          const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+          const { data, error } = await supabase
+            .from('pandal_visits')
+            .select('pandal_id')
+            .gte('visited_at', since);
+            
+          if (!error && data) {
+            const counts = {};
+            data.forEach(row => {
+              counts[row.pandal_id] = (counts[row.pandal_id] || 0) + 1;
+            });
+            liveCountsRef.current = counts;
+          }
+        }
+      } catch (err) {
+        console.warn('Polling failed:', err);
+      }
+    };
+
+    // Initial poll
+    pollCounts();
+    
+    // Poll every 60 seconds
+    pollingIntervalRef.current = setInterval(pollCounts, 60000);
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
 
   // Speak Bengali Function
   const speakPrompt = useCallback((text) => {
@@ -77,6 +119,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
     if (optimizedRoute.length === 0) return;
     setIsNavigating(true);
     setCurrentStopIndex(0);
+    setOsrmError(false);
     requestWakeLock();
 
     // Silent utterance to unlock iOS/browser speech restrictions
@@ -92,6 +135,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
     setIsNavigating(false);
     setRouteData(null);
     setCurrentManeuver(null);
+    setOsrmError(false);
     releaseWakeLock();
     if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
     speakPrompt(t('tour_complete'));
@@ -148,16 +192,21 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
         isFetchingRef.current = true;
         const route = await fetchOSRMRoute([rawLng, rawLat], [activePandal.lng, activePandal.lat]);
         isFetchingRef.current = false;
+        
         if (route) {
           setRouteData(route);
           currentRouteData = route;
           routeDataRef.current = route; // update ref immediately
+          setOsrmError(false);
           if (route.legs && route.legs[0].steps.length > 0) {
             const step = route.legs[0].steps[0];
             const parsed = parseManeuver(step, t);
             setCurrentManeuver(parsed);
             speakPrompt(parsed.text);
           }
+        } else {
+          // OSRM failed (likely 429 rate limit)
+          setOsrmError(true);
         }
       }
 
@@ -221,6 +270,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
       setActiveRouteLine(null);
       routeDataRef.current  = null;
       isFetchingRef.current = false;
+      setOsrmError(false);
       clearRouteCache();
     }
   }, [activePandal?.id]);
@@ -243,6 +293,8 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
     skipToNext,
     isVoiceMuted,
     setIsVoiceMuted,
-    isSpeaking
+    isSpeaking,
+    osrmError,
+    liveCounts: liveCountsRef.current
   };
 }

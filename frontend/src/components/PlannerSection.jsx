@@ -53,6 +53,8 @@ const BUDGET_OPTIONS = [
   { minutes: null, Icon: InfinityIcon, label: 'যতখুশি', labelEn: 'Flexible' },
 ];
 
+import { useRoutePersistence } from '../hooks/useRoutePersistence';
+
 // Arrival time helper
 function getArrivalTime(addMin, lang) {
   const d = new Date(Date.now() + addMin * 60000);
@@ -64,38 +66,69 @@ function getArrivalTime(addMin, lang) {
 export default function PlannerSection() {
   const { lang, t } = useLanguage();
   const [pandalsData, setPandalsData] = useState([]);
+  const [isMounted, setIsMounted] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(true);
+  const [touchStartY, setTouchStartY] = useState(null);
 
-  // UI State
-  const [plannerTab,    setPlannerTab]    = useState('top');
-  const [topN,          setTopN]          = useState(5);
-  const [budgetMin,     setBudgetMin]     = useState(240);
-  const [transportMode, setTransportMode] = useState('walking');
-  const [manualPandals, setManualPandals] = useState([]);
+  const handleTouchStart = (e) => setTouchStartY(e.touches[0].clientY);
+  const handleTouchEnd = (e) => {
+    if (touchStartY === null) return;
+    const diff = e.changedTouches[0].clientY - touchStartY;
+    if (diff > 40 && isDrawerOpen) setIsDrawerOpen(false); // Dragged down
+    if (diff < -40 && !isDrawerOpen) setIsDrawerOpen(true); // Dragged up (just in case)
+    setTouchStartY(null);
+  };
+
+  // Route Persistence state
+  const { routeState, updateRouteState, resetPlan } = useRoutePersistence();
+
+  // UI State mapping to routeState
+  const plannerTab = routeState.plannerTab || 'top';
+  const topN = routeState.topN || 5;
+  const budgetMin = routeState.budgetMin || 240;
+  const transportMode = routeState.transportMode || 'walking';
+  const manualPandals = routeState.manualPandals || [];
+  
   const [liveCounts, setLiveCounts] = useState({});
 
-  // Socket.io connection for live visitor counts
-  useEffect(() => {
-    import('socket.io-client').then(({ io }) => {
-      const socket = io('http://localhost:5000');
-      
-      socket.on('visitor_count_updated', (data) => {
-        setLiveCounts(prev => ({
-          ...prev,
-          [data.pandalId]: data.liveCount
-        }));
-      });
+  // Fix Hydration Error
+  useEffect(() => setIsMounted(true), []);
 
-      return () => socket.disconnect();
-    }).catch(err => console.error("Socket IO import error", err));
-  }, []);
+  // Helper updaters
+  const setPlannerTab = (val) => updateRouteState({ plannerTab: val });
+  const setTopN = (val) => updateRouteState({ topN: val });
+  const setBudgetMin = (val) => updateRouteState({ budgetMin: val });
+  const setTransportMode = (val) => updateRouteState({ transportMode: val });
+  const setManualPandals = (val) => updateRouteState({ manualPandals: typeof val === 'function' ? val(manualPandals) : val });
 
-  // Fetch data
+  // Fetch data & Handle URL Sharing
   useEffect(() => {
     fetch('/data/pandals.json')
       .then(r => r.json())
-      .then(d => setPandalsData(d))
+      .then(d => {
+        setPandalsData(d);
+        // Check URL parameters
+        if (typeof window !== 'undefined') {
+          const urlParams = new URLSearchParams(window.location.search);
+          const stopsParam = urlParams.get('stops');
+          const modeParam = urlParams.get('mode');
+          if (stopsParam) {
+            const stopIds = stopsParam.split(',');
+            const selected = d.filter(p => stopIds.includes(String(p.id)));
+            if (selected.length > 0) {
+              updateRouteState({
+                plannerTab: 'manual',
+                manualPandals: selected,
+                transportMode: modeParam || 'walking'
+              });
+              // Clean URL
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
+          }
+        }
+      })
       .catch(err => console.error('Error loading pandals:', err));
-  }, []);
+  }, [updateRouteState]);
 
   // Compute route based on selected mode
   const { optimizedRoute, stats, trimMessage } = useMemo(() => {
@@ -132,6 +165,13 @@ export default function PlannerSection() {
   // Live Navigator
   const liveNavState = useLiveNavigator(optimizedRoute, lang, t);
 
+  // Sync live counts from hook to local state for MapView
+  useEffect(() => {
+    if (liveNavState.liveCounts) {
+      setLiveCounts(liveNavState.liveCounts);
+    }
+  }, [liveNavState.liveCounts]);
+
   // Handlers
   const handleAddPandal = (pandal) => {
     setPlannerTab('manual');
@@ -147,6 +187,8 @@ export default function PlannerSection() {
   };
 
   const pName = (p) => lang === 'en' ? (p.name_en || p.name) : (p.name_bn || p.name);
+
+  if (!isMounted) return null; // Fix hydration mismatch by only rendering on client
 
   return (
     <section className="relative h-full w-full bg-stone-100 overflow-hidden">
@@ -170,12 +212,31 @@ export default function PlannerSection() {
         )}
       </div>
 
+      {/* Floating Toggle Button (Visible only when drawer is closed) */}
+      {!isDrawerOpen && !liveNavState.isNavigating && (
+        <button 
+          onClick={() => setIsDrawerOpen(true)}
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-white rounded-full p-3 shadow-xl border border-gray-200 text-red-700 animate-bounce md:hidden"
+        >
+          <ChevronRight className="w-6 h-6 -rotate-90" />
+        </button>
+      )}
+
       {/* PLANNER DRAWER */}
       {!liveNavState.isNavigating && (
-        <div className="absolute bottom-0 left-0 right-0 md:relative md:w-[420px] h-[68vh] md:h-full bg-white/97 backdrop-blur-2xl shadow-[0_-12px_48px_rgba(0,0,0,0.12)] z-10 flex flex-col rounded-t-[2rem] md:rounded-none">
+        <div 
+          className={`absolute bottom-0 left-0 right-0 md:relative md:w-[420px] bg-white/97 backdrop-blur-2xl shadow-[0_-12px_48px_rgba(0,0,0,0.12)] z-10 flex flex-col rounded-t-[2rem] md:rounded-none transition-transform duration-300 ease-in-out ${
+            isDrawerOpen ? 'translate-y-0 h-[68vh] md:h-full' : 'translate-y-full h-[68vh]'
+          }`}
+        >
 
-          {/* Mobile drag handle */}
-          <div className="w-full flex justify-center pt-3 pb-2 md:hidden">
+          {/* Mobile drag handle - acts as close button and swipe target */}
+          <div 
+            className="w-full flex justify-center pt-3 pb-4 md:hidden cursor-pointer touch-none"
+            onClick={() => setIsDrawerOpen(false)}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
             <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
           </div>
 

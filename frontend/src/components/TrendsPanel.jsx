@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, Users } from 'lucide-react';
 import pandalData from '../../public/data/pandals.json';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 export default function TrendsPanel() {
   const [trends, setTrends] = useState({ mostVisited: [], leastVisited: [] });
@@ -9,9 +10,35 @@ export default function TrendsPanel() {
   useEffect(() => {
     const fetchTrends = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/trends');
-        const data = await response.json();
-        setTrends(data);
+        if (isSupabaseConfigured) {
+          const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+          const { data, error } = await supabase
+            .from('pandal_visits')
+            .select('pandal_id')
+            .gte('visited_at', since);
+          
+          if (!error && data) {
+            const counts = {};
+            data.forEach(row => {
+              counts[row.pandal_id] = (counts[row.pandal_id] || 0) + 1;
+            });
+            
+            const sortedIds = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+            const most = sortedIds.slice(0, 3).map(id => ({ _id: id, count: counts[id] }));
+            const least = sortedIds.slice(-3).reverse().map(id => ({ _id: id, count: counts[id] }));
+            
+            setTrends({ mostVisited: most, leastVisited: least });
+            return; // Successful Supabase fetch
+          }
+        }
+        
+        // Fallback to static pandals.json popularity if Supabase is down/missing
+        const sortedStatic = [...pandalData].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+        setTrends({
+          mostVisited: sortedStatic.slice(0, 3).map(p => ({ _id: String(p.id), count: p.popularity || 500 })),
+          leastVisited: sortedStatic.slice(-3).reverse().map(p => ({ _id: String(p.id), count: p.popularity || 50 }))
+        });
+        
       } catch (error) {
         console.error('Failed to fetch trends', error);
       } finally {

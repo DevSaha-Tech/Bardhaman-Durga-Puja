@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from 'react';
+"use client";
+
+import React, { useEffect, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { MapPin, Navigation, Star, Zap, Users, CheckCircle, MessageSquarePlus } from 'lucide-react';
+import { MapPin, Navigation, Star, Zap, Users, CheckCircle, MessageSquarePlus, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import ReviewModal from './ReviewModal';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 // Fix for default Leaflet icon paths in Next.js
 delete L.Icon.Default.prototype._getIconUrl;
@@ -62,6 +65,29 @@ function AutoCenterMap({ position, isNavigating }) {
   return null;
 }
 
+// Haversine distance calculation for fallback
+const haversineDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371e3; // Earth radius in meters
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
+  
+  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
+
+// Generate straight-line polyline for Haversine fallback
+const generateHaversinePolyline = (origin, orderedPandals) => {
+  const coords = [origin];
+  orderedPandals.forEach(p => coords.push([p.lat, p.lng]));
+  coords.push(origin); // Return to origin
+  return coords;
+};
+
 export default function MapView({ 
   pandalsData = [], 
   selectedRoute = [], 
@@ -76,6 +102,8 @@ export default function MapView({
 }) {
   const { lang, t } = useLanguage();
   const [reviewPandal, setReviewPandal] = useState(null);
+  const [osrmError, setOsrmError] = useState(false);
+  const [haversinePolyline, setHaversinePolyline] = useState(null);
   
   const liveCenter = [23.6183691, 88.1185789];
   const mapCenter = userLocation ? [userLocation.lat, userLocation.lng] : liveCenter;
@@ -90,26 +118,40 @@ export default function MapView({
     ? activeRouteLine.map(c => [c[1], c[0]])
     : routeData?.geometry?.coordinates?.map(c => [c[1], c[0]]) || [];
 
-  const handleCheckIn = async (pandalId) => {
-    const lastCheckIn = localStorage.getItem(`checkin_${pandalId}`);
+  // Generate Haversine fallback polyline when OSRM fails
+  useEffect(() => {
+    if (isNavigating && activePandal && selectedRoute.length > 0) {
+      const origin = userLocation ? [userLocation.lat, userLocation.lng] : liveCenter;
+      const remainingRoute = selectedRoute.slice(selectedRoute.findIndex(p => p.id === activePandal.id));
+      setHaversinePolyline(generateHaversinePolyline(origin, remainingRoute));
+    }
+  }, [isNavigating, activePandal, selectedRoute, userLocation]);
+
+  const handleCheckIn = useCallback(async (pandalId) => {
+    const lastCheckIn = localStorage.getItem(`last_checkin_${pandalId}`);
     const now = Date.now();
     // 2 hours cooldown
     if (lastCheckIn && (now - parseInt(lastCheckIn)) < 2 * 60 * 60 * 1000) {
-      alert('আপনি ইতিমধ্যে এই মণ্ডপে চেক-ইন করেছেন!');
+      alert('আপনি ইতিমধ্যে এই মণ্ডপে চেক-ইন করেছেন! ২ ঘণ্টা পর আবার চেষ্টা করুন।');
       return;
     }
 
     try {
-      await fetch(`http://localhost:5000/api/pandals/${pandalId}/checkin`, {
-        method: 'POST'
-      });
-      localStorage.setItem(`checkin_${pandalId}`, now.toString());
+      if (isSupabaseConfigured) {
+        await supabase.from('pandal_visits').insert([{ pandal_id: String(pandalId) }]);
+      }
+      localStorage.setItem(`last_checkin_${pandalId}`, now.toString());
       alert('চেক-ইন সফল হয়েছে!');
     } catch (err) {
       console.error(err);
       alert('চেক-ইন করতে সমস্যা হয়েছে।');
     }
-  };
+  }, []);
+
+  // Determine which polyline to show during navigation
+  const navigationPolyline = osrmError && haversinePolyline 
+    ? haversinePolyline 
+    : (osrmPolyline.length > 0 ? osrmPolyline : (activePandal ? [mapCenter, [activePandal.lat, activePandal.lng]] : []));
 
   return (
     <>
@@ -150,10 +192,38 @@ export default function MapView({
         )}
 
         {isNavigating && activePandal && (
-          <Polyline 
-            positions={osrmPolyline.length > 0 ? osrmPolyline : [mapCenter, [activePandal.lat, activePandal.lng]]} 
-            pathOptions={{ color: '#4285F4', weight: 7, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }} 
-          />
+          <>
+            {/* OSRM Route (primary) */}
+            {osrmPolyline.length > 0 && !osrmError && (
+              <Polyline 
+                positions={osrmPolyline} 
+                pathOptions={{ color: '#4285F4', weight: 7, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }} 
+              />
+            )}
+            
+            {/* Haversine Fallback (dashed red line) */}
+            {(osrmError || osrmPolyline.length === 0) && haversinePolyline && (
+              <Polyline 
+                positions={haversinePolyline} 
+                pathOptions={{ 
+                  color: '#dc2626', 
+                  weight: 5, 
+                  opacity: 0.8, 
+                  dashArray: '10, 10',
+                  lineCap: 'round',
+                  lineJoin: 'round'
+                }} 
+              />
+            )}
+            
+            {/* Fallback indicator */}
+            {osrmError && (
+              <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                OSRM লিমিট পৌঁছেছে — সরাসরি রুট দেখানো হচ্ছে
+              </div>
+            )}
+          </>
         )}
 
         {pandalsData.map((pandal) => {
@@ -182,7 +252,7 @@ export default function MapView({
                           </div>
                           {count > 0 && (
                             <div className="flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full w-max mt-1">
-                              <Users className="w-3 h-3" /> Live: {count} জন
+                              <Users className="w-3 h-3" /> ● {count} জন দর্শনার্থী উপস্থিত
                             </div>
                           )}
                         </div>

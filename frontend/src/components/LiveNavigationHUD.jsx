@@ -1,6 +1,7 @@
-import React from 'react';
-import { Volume2, VolumeX, ArrowUp, ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight, MapPin, X, FastForward, CheckCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Volume2, VolumeX, ArrowUp, ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight, MapPin, X, FastForward, CheckCircle, ExternalLink } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import CheckInModal from './CheckInModal';
 
 // Map icon strings from navigationEngine to actual lucide components
 const IconMap = {
@@ -26,16 +27,29 @@ export default function LiveNavigationHUD({ navState, totalStops }) {
   } = navState;
   
   const { lang, t } = useLanguage();
+  const [modalDismissedFor, setModalDismissedFor] = useState(null);
 
   if (!activePandal) return null;
 
   const isArrived = distanceToTarget !== null && distanceToTarget <= 30;
   
+  // Show modal if arrived, haven't dismissed it for this pandal, and haven't checked in recently
+  const hasCheckedIn = typeof window !== 'undefined' && localStorage.getItem(`last_checkin_${activePandal.id}`) !== null;
+  const showModal = isArrived && modalDismissedFor !== activePandal.id && !hasCheckedIn;
+
   // Resolve icon component
   const ManeuverIcon = currentManeuver && IconMap[currentManeuver.icon] ? IconMap[currentManeuver.icon] : ArrowUp;
 
   return (
     <>
+      {showModal && (
+        <CheckInModal 
+          pandal={activePandal} 
+          onDismiss={() => {
+            setModalDismissedFor(activePandal.id);
+          }} 
+        />
+      )}
       {/* Top Banner - Turn Instruction */}
       <div className="absolute top-4 left-4 right-4 z-[999] flex justify-center pointer-events-none">
         <div className="bg-gray-900/95 backdrop-blur-md shadow-2xl rounded-3xl p-4 flex items-center justify-between gap-4 w-full max-w-md pointer-events-auto border border-gray-700">
@@ -109,6 +123,13 @@ export default function LiveNavigationHUD({ navState, totalStops }) {
               {currentStopIndex === totalStops - 1 ? t('tour_complete') : t('skip')} <FastForward className="w-5 h-5" />
             </button>
           </div>
+          
+          <button 
+            onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${activePandal.lat},${activePandal.lng}`, '_blank')}
+            className="w-full mt-3 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold rounded-xl flex items-center justify-center gap-2 transition-colors"
+          >
+            Google Maps-এ চলুন <ExternalLink className="w-4 h-4" />
+          </button>
 
         </div>
       </div>

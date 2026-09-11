@@ -1,24 +1,12 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const http = require('http');
-const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 
 // Connect to Database
 connectDB();
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
-  }
-});
-
-// Make io accessible to our router
-app.set('io', io);
 
 // Middleware
 app.use(cors());
@@ -34,19 +22,15 @@ app.use('/api/feedback', feedbackRoutes);
 
 // Basic Health Check Endpoint
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'Backend is running correctly.' });
+  res.status(200).json({ status: 'healthy', timestamp: Date.now() });
 });
 
-// Socket.io Connection Listener
-io.on('connection', (socket) => {
-  console.log(`User connected: ${socket.id}`);
-
-  socket.on('disconnect', () => {
-    console.log(`User disconnected: ${socket.id}`);
-  });
+// Analytics Route (Placeholder for visits tracking)
+app.post('/api/analytics/visit', (req, res) => {
+  res.status(200).json({ success: true, message: 'Visit logged' });
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
