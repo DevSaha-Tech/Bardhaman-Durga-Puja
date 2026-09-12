@@ -70,6 +70,30 @@ function AutoCenterMap({ position, isNavigating, userLocation, isOutsideCity, se
   return null;
 }
 
+// Locate Me Component
+function LocateMeButton({ userLocation }) {
+  const map = useMap();
+  
+  if (!userLocation) return null;
+  
+  return (
+    <div className="leaflet-bottom leaflet-right mb-24 mr-4 pointer-events-auto">
+      <div className="leaflet-control leaflet-bar border-none shadow-xl rounded-full bg-white overflow-hidden">
+        <button 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            map.setView([userLocation.lat, userLocation.lng], 16, { animate: true });
+          }}
+          className="w-12 h-12 flex items-center justify-center bg-white text-blue-600 hover:bg-blue-50 transition-colors pointer-events-auto"
+          title="Locate Me"
+        >
+          <Navigation className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // Generate straight-line polyline for Haversine fallback
 const generateHaversinePolyline = (origin, orderedPandals) => {
@@ -194,6 +218,7 @@ export default function MapView({
           isOutsideCity={isOutsideCity}
           selectedRoute={selectedRoute} 
         />
+        <LocateMeButton userLocation={userLocation} />
 
         {userLocation && (
           <Marker 

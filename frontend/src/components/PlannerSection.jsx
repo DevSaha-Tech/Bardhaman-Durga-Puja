@@ -255,7 +255,7 @@ export default function PlannerSection() {
           isOutsideCity={isOutsideCity}
           isRouteMode={plannerTab === 'manual'}
           isNavigating={liveNavState.isNavigating}
-          userLocation={liveNavState.userLocation}
+          userLocation={liveNavState.userLocation || startLocation}
           routeData={liveNavState.routeData}
           activeRouteLine={liveNavState.activeRouteLine}
           activePandal={liveNavState.activePandal}
