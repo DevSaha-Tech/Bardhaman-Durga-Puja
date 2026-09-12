@@ -93,7 +93,7 @@ export default function PlannerSection() {
   const { routeState, updateRouteState, resetPlan } = useRoutePersistence();
 
   // UI State mapping to routeState
-  const plannerTab = routeState.plannerTab !== undefined ? routeState.plannerTab : 'manual';
+  const plannerTab = routeState.plannerTab !== undefined ? routeState.plannerTab : null;
   const topN = routeState.topN !== undefined ? routeState.topN : 5;
   const budgetMin = routeState.budgetMin !== undefined ? routeState.budgetMin : 240;
   const transportMode = routeState.transportMode || 'walking';
@@ -497,17 +497,17 @@ export default function PlannerSection() {
               </div>
             )}
 
-            {/* Manual mode empty state */}
-            {plannerTab === 'manual' && manualPandals.length === 0 && (
+            {/* Empty state */}
+            {(!plannerTab || (plannerTab === 'manual' && manualPandals.length === 0)) && (
               <div className="text-center py-8 px-4 bg-gray-50 rounded-2xl border border-dashed border-gray-300">
                 <MapPin className="w-8 h-8 text-gray-400 mx-auto mb-3 opacity-50" />
-                <p className="text-gray-500 font-medium text-sm">ম্যাপ থেকে মণ্ডপে ট্যাপ করুন</p>
+                <p className="text-gray-500 font-medium text-sm">ম্যাপ থেকে মণ্ডপ নির্বাচন করুন অথবা ওপরের ফিল্টার বেছে নিন</p>
               </div>
             )}
 
             {/* Start Button */}
             {optimizedRoute.length > 0 && (
-              (startLocation === null || isOutsideCity) ? (
+              (startLocation === null) ? (
                 <button
                   onClick={() => {
                     if (typeof navigator !== 'undefined' && navigator.geolocation) {
@@ -535,11 +535,29 @@ export default function PlannerSection() {
                       });
                     }
                   }}
-                  className="w-full py-4 bg-white text-red-800 border-2 border-red-800 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:bg-red-50"
+                  className="w-full py-4 bg-white text-gray-700 border-2 border-gray-300 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-50"
                 >
-                  <Navigation className="w-5 h-5 text-red-800" />
-                  জিপিএস অন করে লাইভ নেভিগেশন শুরু করুন
+                  <MapPin className="w-5 h-5 text-gray-600" />
+                  📍 জিপিএস অন করুন
                 </button>
+              ) : isOutsideCity ? (
+                <div className="flex flex-col gap-2">
+                  <button className="w-full py-3 bg-white text-amber-600 border-2 border-amber-500 rounded-2xl font-bold flex flex-col items-center justify-center gap-1 cursor-default">
+                    <span className="flex items-center gap-2"><Navigation className="w-4 h-4" /> পরিক্রমা প্রিভিউ (শহরের বাইরে আছেন)</span>
+                    <span className="text-[10px] font-normal opacity-80">লাইভ নেভিগেশন বর্ধমান শহরে পৌঁছালে স্বয়ংক্রিয়ভাবে সক্রিয় হবে।</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (typeof window !== 'undefined' && window.speechSynthesis) {
+                        window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+                      }
+                      liveNavState.startTour();
+                    }}
+                    className="w-full py-3 bg-white text-amber-600 border border-amber-500 rounded-2xl font-bold flex items-center justify-center transition-all hover:bg-amber-50 text-sm"
+                  >
+                    ডেমো নেভিগেশন দেখুন (Demo)
+                  </button>
+                </div>
               ) : (
                 <button
                   onClick={() => {
@@ -551,7 +569,7 @@ export default function PlannerSection() {
                   className="w-full py-4 bg-gradient-to-r from-red-700 to-red-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <Play className="w-5 h-5 fill-white" />
-                  {t('start_tour')} &middot; {optimizedRoute.length - 1} {lang === 'en' ? 'stops' : 'মণ্ডপ'}
+                  পরিক্রমা শুরু করুন — {optimizedRoute.length - 1} {lang === 'en' ? 'stops' : 'মণ্ডপ'}
                 </button>
               )
             )}

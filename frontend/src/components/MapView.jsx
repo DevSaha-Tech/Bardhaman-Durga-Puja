@@ -222,8 +222,8 @@ export default function MapView({
 
         {userLocation && (
           <Marker 
-            position={mapCenter} 
-            icon={isNavigating ? getLivePulseIcon(userLocation.heading || 0) : planningUserIcon}
+            position={[userLocation.lat, userLocation.lng]} 
+            icon={getLivePulseIcon(userLocation.heading || 0)}
             zIndexOffset={1000}
           >
             {!isNavigating && (
@@ -335,7 +335,7 @@ export default function MapView({
                             : 'bg-red-800 hover:bg-red-900 text-white shadow-sm'
                         }`}
                       >
-                        {isAdded ? (lang === 'en' ? 'Remove' : 'তালিকা থেকে বাদ দিন') : t('add_to_route')}
+                        {isAdded ? (lang === 'en' ? '- Remove from Route' : '- তালিকা থেকে বাদ দিন') : (lang === 'en' ? '+ Add to Route' : '+ তালিকায় যোগ করুন')}
                       </button>
                     </div>
                   </div>

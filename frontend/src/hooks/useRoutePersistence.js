@@ -11,7 +11,8 @@ export function useRoutePersistence(initialState = null) {
       activePlan: null,
       selectedPandals: [],
       transportMode: 'walking',
-      currentStopIndex: 0
+      currentStopIndex: 0,
+      plannerTab: null
     };
   });
 
