@@ -52,7 +52,7 @@ const routeIcon = new L.Icon({
 });
 
 // Auto-Pan Component
-function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute }) {
+function AutoCenterMap({ position, isNavigating, userLocation, isOutsideCity, selectedRoute }) {
   const map = useMap();
   
   useEffect(() => {
@@ -61,11 +61,11 @@ function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute }) 
         animate: true,
         duration: 0.5,
       });
-    } else if (!userLocation && selectedRoute && selectedRoute.length > 0) {
+    } else if ((!userLocation || isOutsideCity) && selectedRoute && selectedRoute.length > 0) {
       const bounds = L.latLngBounds(selectedRoute.map(p => [p.lat, p.lng]));
       map.fitBounds(bounds, { padding: [50, 50], animate: true, duration: 0.5 });
     }
-  }, [position, isNavigating, userLocation, selectedRoute, map]);
+  }, [position, isNavigating, userLocation, isOutsideCity, selectedRoute, map]);
 
   return null;
 }
@@ -83,9 +83,11 @@ export default function MapView({
   pandalsData = [], 
   selectedRoute = [], 
   onAddPandal, 
+  onRemovePandal,
   isRouteMode,
   isNavigating = false,
   userLocation = null,
+  isOutsideCity = false,
   routeData = null,
   activeRouteLine = null,
   activePandal = null,
@@ -97,7 +99,7 @@ export default function MapView({
   const [haversinePolyline, setHaversinePolyline] = useState(null);
   
   const liveCenter = [23.6183691, 88.1185789];
-  const mapCenter = userLocation ? [userLocation.lat, userLocation.lng] : (selectedRoute.length > 0 ? [selectedRoute[0].lat, selectedRoute[0].lng] : liveCenter);
+  const mapCenter = (userLocation && !isOutsideCity) ? [userLocation.lat, userLocation.lng] : (selectedRoute.length > 0 ? [selectedRoute[0].lat, selectedRoute[0].lng] : liveCenter);
 
   let userCoordsForPolyline = [];
   if (userLocation && selectedRoute.length > 0) {
@@ -185,7 +187,13 @@ export default function MapView({
           maxZoom={22}
         />
         
-        <AutoCenterMap position={mapCenter} isNavigating={isNavigating} userLocation={userLocation} selectedRoute={selectedRoute} />
+        <AutoCenterMap 
+          position={isNavigating && userLocation ? [userLocation.lat, userLocation.lng] : null} 
+          isNavigating={isNavigating} 
+          userLocation={userLocation}
+          isOutsideCity={isOutsideCity}
+          selectedRoute={selectedRoute} 
+        />
 
         {userLocation && (
           <Marker 
@@ -295,15 +303,14 @@ export default function MapView({
 
                     <div className="mt-1 pt-2 border-t border-gray-100">
                       <button 
-                        onClick={() => onAddPandal(pandal)}
-                        disabled={isAdded}
+                        onClick={() => isAdded && onRemovePandal ? onRemovePandal(pandal.id) : onAddPandal(pandal)}
                         className={`w-full py-1.5 rounded-md font-bold text-sm flex items-center justify-center gap-1 transition-all ${
                           isAdded 
-                            ? 'bg-green-100 text-green-700 border border-green-200 cursor-default' 
+                            ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 shadow-sm' 
                             : 'bg-red-800 hover:bg-red-900 text-white shadow-sm'
                         }`}
                       >
-                        {isAdded ? t('added') : t('add_to_route')}
+                        {isAdded ? (lang === 'en' ? 'Remove' : 'তালিকা থেকে বাদ দিন') : t('add_to_route')}
                       </button>
                     </div>
                   </div>

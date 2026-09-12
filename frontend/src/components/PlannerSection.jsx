@@ -251,6 +251,8 @@ export default function PlannerSection() {
           pandalsData={pandalsData}
           selectedRoute={optimizedRoute}
           onAddPandal={handleAddPandal}
+          onRemovePandal={handleRemovePandal}
+          isOutsideCity={isOutsideCity}
           isRouteMode={plannerTab === 'manual'}
           isNavigating={liveNavState.isNavigating}
           userLocation={liveNavState.userLocation}
