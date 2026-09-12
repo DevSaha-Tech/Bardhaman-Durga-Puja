@@ -9,13 +9,25 @@ import {
 } from 'lucide-react';
 import {
   solveTsp, filterTopN, solveBudget, calcItinerary,
-  formatDuration, TRANSPORT_MODES
+  formatDuration, TRANSPORT_MODES, haversineDistance
 } from '../utils/tspSolver';
 import { generateGoogleMapsUrl } from '../utils/navigationUrl';
+
+const CITY_CENTER = { lat: 23.2324, lng: 87.8615 };
+
+function formatDurationBn(totalMinutes) {
+  const rounded = Math.round(totalMinutes);
+  const hours = Math.floor(rounded / 60);
+  const mins = rounded % 60;
+  if (hours === 0) return `${mins} মি`;
+  if (mins === 0) return `${hours} ঘণ্টা`;
+  return `${hours} ঘণ্টা ${mins} মি`;
+}
 import { useLiveNavigator } from '../hooks/useLiveNavigator';
 import LiveNavigationHUD from './LiveNavigationHUD';
 import { useLanguage } from '@/context/LanguageContext';
 import TrendsPanel from './TrendsPanel';
+import Swal from 'sweetalert2';
 
 // Dynamically import MapView with SSR disabled
 const MapView = dynamic(() => import('./MapView'), {
@@ -29,9 +41,6 @@ const MapView = dynamic(() => import('./MapView'), {
     </div>
   )
 });
-
-// Origin (Dummy / Live GPS fallback)
-const liveCenter = { lat: 23.6183691, lng: 88.1185789 };
 
 // --- Transport Mode pills ---
 const TRANSPORT_PILLS = [
@@ -69,6 +78,7 @@ export default function PlannerSection() {
   const [isMounted, setIsMounted] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(true);
   const [touchStartY, setTouchStartY] = useState(null);
+  const [startLocation, setStartLocation] = useState(null);
 
   const handleTouchStart = (e) => setTouchStartY(e.touches[0].clientY);
   const handleTouchEnd = (e) => {
@@ -83,9 +93,9 @@ export default function PlannerSection() {
   const { routeState, updateRouteState, resetPlan } = useRoutePersistence();
 
   // UI State mapping to routeState
-  const plannerTab = routeState.plannerTab || 'top';
-  const topN = routeState.topN || 5;
-  const budgetMin = routeState.budgetMin || 240;
+  const plannerTab = routeState.plannerTab !== undefined ? routeState.plannerTab : 'manual';
+  const topN = routeState.topN !== undefined ? routeState.topN : 5;
+  const budgetMin = routeState.budgetMin !== undefined ? routeState.budgetMin : 240;
   const transportMode = routeState.transportMode || 'walking';
   const manualPandals = routeState.manualPandals || [];
   
@@ -93,6 +103,22 @@ export default function PlannerSection() {
 
   // Fix Hydration Error
   useEffect(() => setIsMounted(true), []);
+
+  // Get actual GPS Location dynamically
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setStartLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        (err) => {
+          console.warn('GPS denied or unavailable. Planner will run in Preview Mode.', err);
+          setStartLocation(null); // Keep it explicitly null
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    } else {
+      setStartLocation(null);
+    }
+  }, [pandalsData]);
 
   // Helper updaters
   const setPlannerTab = (val) => updateRouteState({ plannerTab: val });
@@ -131,36 +157,62 @@ export default function PlannerSection() {
   }, [updateRouteState]);
 
   // Compute route based on selected mode
-  const { optimizedRoute, stats, trimMessage } = useMemo(() => {
-    if (pandalsData.length === 0) return { optimizedRoute: [], stats: null, trimMessage: null };
+  const { optimizedRoute, stats, trimMessage, isPreviewMode, isOutsideCity, distToCity } = useMemo(() => {
+    if (pandalsData.length === 0) return { optimizedRoute: [], stats: null, trimMessage: null, isPreviewMode: false, isOutsideCity: false, distToCity: 0 };
 
-    const END_NODE = { id: 'END', name: 'Return to Start', name_bn: 'শুরুর স্থান', name_en: 'Return to Start', zone: 'Destination', lat: liveCenter.lat, lng: liveCenter.lng };
+    let isPreview = false;
+    let isOutside = false;
+    let distanceToCenter = 0;
+    
+    // Determine the base pandals to use for calculation based on tab
+    let selectedForCalc = [];
+    if (plannerTab === 'top') {
+      selectedForCalc = filterTopN(pandalsData, topN);
+    } else if (plannerTab === 'budget') {
+      selectedForCalc = [...pandalsData].sort((a, b) => (a.popularity ?? 99) - (b.popularity ?? 99));
+    } else if (plannerTab === 'manual') {
+      selectedForCalc = manualPandals;
+    }
+
+    if (selectedForCalc.length === 0) return { optimizedRoute: [], stats: null, trimMessage: null, isPreviewMode: false, isOutsideCity: false, distToCity: 0 };
+
+    let origin = startLocation;
+    
+    if (origin) {
+      distanceToCenter = haversineDistance(origin, CITY_CENTER);
+      if (distanceToCenter > 15) {
+        isOutside = true;
+        isPreview = true;
+        origin = { lat: selectedForCalc[0].lat, lng: selectedForCalc[0].lng };
+      }
+    }
+
+    if (!origin) {
+      origin = { lat: selectedForCalc[0].lat, lng: selectedForCalc[0].lng };
+      isPreview = true;
+    }
+
+    const END_NODE = { id: 'END', name: 'Return to Start', name_bn: 'শুরুর স্থান', name_en: 'Return to Start', zone: 'Destination', lat: origin.lat, lng: origin.lng };
 
     const buildRoute = (pandals) => {
-      if (pandals.length === 0) return { optimizedRoute: [], stats: null, trimMessage: null };
-      const nodes  = [{ id: '__START__', ...liveCenter }, ...pandals];
+      if (pandals.length === 0) return { optimizedRoute: [], stats: null, trimMessage: null, isPreviewMode: isPreview, isOutsideCity: isOutside, distToCity: distanceToCenter };
+      const nodes = isPreview ? [...pandals] : [{ id: '__START__', ...origin }, ...pandals];
       const solved = solveTsp(nodes, transportMode).filter(p => p.id !== '__START__');
-      const itin   = calcItinerary(liveCenter, solved, transportMode);
-      return { optimizedRoute: [...solved, END_NODE], stats: itin, trimMessage: null };
+      const itin = calcItinerary(origin, solved, transportMode);
+      return { optimizedRoute: [...solved, END_NODE], stats: itin, trimMessage: null, isPreviewMode: isPreview, isOutsideCity: isOutside, distToCity: distanceToCenter };
     };
 
-    if (plannerTab === 'top') {
-      return buildRoute(filterTopN(pandalsData, topN));
-    }
-
-    if (plannerTab === 'budget') {
-      if (!budgetMin) return buildRoute([...pandalsData].sort((a, b) => (a.popularity ?? 99) - (b.popularity ?? 99)));
-      const { selected, stats: itin, trimmedCount } = solveBudget(liveCenter, pandalsData, budgetMin, transportMode);
+    if (plannerTab === 'budget' && budgetMin) {
+      const { selected, stats: itin, trimmedCount } = solveBudget(origin, pandalsData, budgetMin, transportMode);
       const bLabel = BUDGET_OPTIONS.find(b => b.minutes === budgetMin);
       const trimMsg = trimmedCount > 0 ? `আপনার ${bLabel?.label ?? ''} বাজেটে সেরা ${selected.length}টি মণ্ডপ নির্বাচিত` : null;
-      return { optimizedRoute: selected.length > 0 ? [...selected, END_NODE] : [], stats: itin, trimMessage: trimMsg };
+      return { optimizedRoute: selected.length > 0 ? [...selected, END_NODE] : [], stats: itin, trimMessage: trimMsg, isPreviewMode: isPreview, isOutsideCity: isOutside, distToCity: distanceToCenter };
     }
 
-    // manual or trends (trends doesn't build route)
-    if (plannerTab === 'trends') return { optimizedRoute: [], stats: null, trimMessage: null };
+    if (plannerTab === 'trends') return { optimizedRoute: [], stats: null, trimMessage: null, isPreviewMode: false, isOutsideCity: false, distToCity: 0 };
 
-    return buildRoute(manualPandals);
-  }, [pandalsData, plannerTab, topN, budgetMin, transportMode, manualPandals]);
+    return buildRoute(selectedForCalc);
+  }, [pandalsData, plannerTab, topN, budgetMin, transportMode, manualPandals, startLocation]);
 
   // Live Navigator
   const liveNavState = useLiveNavigator(optimizedRoute, lang, t);
@@ -344,12 +396,32 @@ export default function PlannerSection() {
               </div>
             )}
 
+            {/* GPS Denied Banner */}
+            {liveNavState.gpsPermissionDenied && !isOutsideCity && (
+              <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 text-xs text-red-800 font-medium">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
+                সঠিক লাইভ নেভিগেশনের জন্য জিপিএস অন করুন। বর্তমানে আপনি মণ্ডপ পরিক্রমার প্রিভিউ দেখছেন।
+              </div>
+            )}
+            
+            {/* Out of Town Banner */}
+            {isOutsideCity && (
+              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-xs text-amber-800 font-medium">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
+                📍 আপনি বর্ধমান শহরের বাইরে আছেন (~{Math.round(distToCity)} কিমি)। এটি বর্ধমান শহরের ভেতরের পরিক্রমা প্রিভিউ।
+              </div>
+            )}
+
             {/* ETA Glassmorphic Card */}
             {stats && (
               <div className="bg-white/90 backdrop-blur-md shadow-lg border border-amber-200/60 rounded-2xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">মোট সময়</span>
-                  <span className="text-2xl font-extrabold text-red-800">{formatDuration(stats.totalMin, lang)}</span>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    {isPreviewMode ? 'মণ্ডপ-টু-মণ্ডপ আনুমানিক সময় ও দূরত্ব (Preview Mode)' : 'মোট সময়'}
+                  </span>
+                  <span className="text-2xl font-extrabold text-red-800">
+                    {lang === 'bn' ? formatDurationBn(stats.totalMin) : formatDuration(stats.totalMin, lang)}
+                  </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2 pt-1">
                   <div className="bg-blue-50 rounded-xl p-2 text-center">
@@ -433,13 +505,53 @@ export default function PlannerSection() {
 
             {/* Start Button */}
             {optimizedRoute.length > 0 && (
-              <button
-                onClick={liveNavState.startTour}
-                className="w-full py-4 bg-gradient-to-r from-red-700 to-red-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <Play className="w-5 h-5 fill-white" />
-                {t('start_tour')} &middot; {optimizedRoute.length - 1} {lang === 'en' ? 'stops' : 'মণ্ডপ'}
-              </button>
+              (startLocation === null || isOutsideCity) ? (
+                <button
+                  onClick={() => {
+                    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => setStartLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                        (err) => {
+                          console.warn('GPS prompt from button denied:', err);
+                          Swal.fire({
+                             icon: 'error',
+                             title: 'লোকেশন সার্ভিস বন্ধ',
+                             text: 'লাইভ নেভিগেশন ব্যবহার করতে অনুগ্রহ করে আপনার ফোনের জিপিএস / লোকেশন সার্ভিস অন করুন এবং ব্রাউজারে পারমিশন দিন।',
+                             confirmButtonColor: '#991b1b',
+                             confirmButtonText: 'ঠিক আছে'
+                          });
+                        },
+                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                      );
+                    } else {
+                      Swal.fire({
+                         icon: 'error',
+                         title: 'অসমর্থিত ডিভাইস',
+                         text: 'আপনার ডিভাইসে লোকেশন সার্ভিস সাপোর্ট করছে না।',
+                         confirmButtonColor: '#991b1b',
+                         confirmButtonText: 'ঠিক আছে'
+                      });
+                    }
+                  }}
+                  className="w-full py-4 bg-white text-red-800 border-2 border-red-800 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:bg-red-50"
+                >
+                  <Navigation className="w-5 h-5 text-red-800" />
+                  জিপিএস অন করে লাইভ নেভিগেশন শুরু করুন
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (typeof window !== 'undefined' && window.speechSynthesis) {
+                      window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+                    }
+                    liveNavState.startTour();
+                  }}
+                  className="w-full py-4 bg-gradient-to-r from-red-700 to-red-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <Play className="w-5 h-5 fill-white" />
+                  {t('start_tour')} &middot; {optimizedRoute.length - 1} {lang === 'en' ? 'stops' : 'মণ্ডপ'}
+                </button>
+              )
             )}
           </div>
         </div>

@@ -1,17 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
+import { safeStorage } from '../utils/storage';
 
 const STORAGE_KEY = 'puja_active_plan';
 
 export function useRoutePersistence(initialState = null) {
   const [routeState, setRouteState] = useState(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) return JSON.parse(stored);
-      } catch (err) {
-        console.error('Failed to load route state from localStorage', err);
-      }
-    }
+    const stored = safeStorage.get(STORAGE_KEY);
+    if (stored) return stored;
     return initialState || {
       activePlan: null,
       selectedPandals: [],
@@ -22,12 +17,8 @@ export function useRoutePersistence(initialState = null) {
 
   // Save to localStorage whenever state changes
   useEffect(() => {
-    if (typeof window !== 'undefined' && routeState) {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(routeState));
-      } catch (err) {
-        console.error('Failed to save route state to localStorage', err);
-      }
+    if (routeState) {
+      safeStorage.set(STORAGE_KEY, routeState);
     }
   }, [routeState]);
 
@@ -42,9 +33,7 @@ export function useRoutePersistence(initialState = null) {
       transportMode: 'walking',
       currentStopIndex: 0
     });
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(STORAGE_KEY);
-    }
+    safeStorage.remove(STORAGE_KEY);
   }, []);
 
   return { routeState, updateRouteState, resetPlan };

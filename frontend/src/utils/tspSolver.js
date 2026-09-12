@@ -9,10 +9,14 @@ const SPEEDS = {
 const OSRM_BASE_URL = 'https://router.project-osrm.org';
 
 // Calculate Haversine distance in km
-function getDistanceFallback(point1, point2) {
+export function haversineDistance(point1, point2) {
   const from = turf.point([point1.lng, point1.lat]);
   const to = turf.point([point2.lng, point2.lat]);
   return turf.distance(from, to, { units: 'kilometers' });
+}
+
+function getDistanceFallback(point1, point2) {
+  return haversineDistance(point1, point2);
 }
 
 // Fetch real route from OSRM (or fallback)
@@ -131,11 +135,19 @@ export function solveBudget(startNode, pandals, budgetMin, mode) {
   const sorted = filterTopN(pandals, null);
   const selected = [];
   let currentMin = 0;
+  let currentPos = startNode;
+  const speedMode = mode === 'cycling' ? 'bike' : mode === 'driving' ? 'car' : 'walking';
+  const speed = SPEEDS[speedMode] || 5;
+
   for (const p of sorted) {
-    // very naive budget constraint check for build passing
-    if (currentMin + (p.dwellMinutes || 20) + 15 <= budgetMin) {
+    const dist = getDistanceFallback(currentPos, p);
+    const travelMin = (dist / speed) * 60;
+    const dwellMin = p.dwellMinutes || 20;
+
+    if (currentMin + travelMin + dwellMin <= budgetMin) {
       selected.push(p);
-      currentMin += (p.dwellMinutes || 20) + 15;
+      currentMin += travelMin + dwellMin;
+      currentPos = p;
     }
   }
   return { selected, stats: calcItinerary(startNode, selected, mode), trimmedCount: pandals.length - selected.length };

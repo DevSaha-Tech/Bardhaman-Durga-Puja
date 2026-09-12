@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CheckCircle, X, MapPin, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { safeStorage } from '@/utils/storage';
 
 const FAST_TAGS = [
   { id: 'long_line', label: 'প্রচণ্ড ভিড়', labelEn: 'Long Line' },
@@ -24,7 +25,7 @@ export default function CheckInModal({ pandal, onDismiss }) {
       }
       
       // Lock check-in for 2 hours in localStorage
-      localStorage.setItem(`last_checkin_${pandal.id}`, Date.now().toString());
+      safeStorage.set(`last_checkin_${pandal.id}`, Date.now().toString());
       setSuccess(true);
       setTimeout(onDismiss, 2000);
     } catch (err) {

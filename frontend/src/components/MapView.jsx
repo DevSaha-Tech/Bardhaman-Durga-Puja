@@ -8,6 +8,8 @@ import { MapPin, Navigation, Star, Zap, Users, CheckCircle, MessageSquarePlus, A
 import { useLanguage } from '@/context/LanguageContext';
 import ReviewModal from './ReviewModal';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { safeStorage } from '@/utils/storage';
+import { haversineDistance } from '../utils/tspSolver';
 
 // Fix for default Leaflet icon paths in Next.js
 delete L.Icon.Default.prototype._getIconUrl;
@@ -50,7 +52,7 @@ const routeIcon = new L.Icon({
 });
 
 // Auto-Pan Component
-function AutoCenterMap({ position, isNavigating }) {
+function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute }) {
   const map = useMap();
   
   useEffect(() => {
@@ -59,26 +61,15 @@ function AutoCenterMap({ position, isNavigating }) {
         animate: true,
         duration: 0.5,
       });
+    } else if (!userLocation && selectedRoute && selectedRoute.length > 0) {
+      const bounds = L.latLngBounds(selectedRoute.map(p => [p.lat, p.lng]));
+      map.fitBounds(bounds, { padding: [50, 50], animate: true, duration: 0.5 });
     }
-  }, [position, isNavigating, map]);
+  }, [position, isNavigating, userLocation, selectedRoute, map]);
 
   return null;
 }
 
-// Haversine distance calculation for fallback
-const haversineDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371e3; // Earth radius in meters
-  const φ1 = lat1 * Math.PI / 180;
-  const φ2 = lat2 * Math.PI / 180;
-  const Δφ = (lat2 - lat1) * Math.PI / 180;
-  const Δλ = (lon2 - lon1) * Math.PI / 180;
-  
-  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-            Math.cos(φ1) * Math.cos(φ2) *
-            Math.sin(Δλ/2) * Math.sin(Δλ/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
-};
 
 // Generate straight-line polyline for Haversine fallback
 const generateHaversinePolyline = (origin, orderedPandals) => {
@@ -106,12 +97,20 @@ export default function MapView({
   const [haversinePolyline, setHaversinePolyline] = useState(null);
   
   const liveCenter = [23.6183691, 88.1185789];
-  const mapCenter = userLocation ? [userLocation.lat, userLocation.lng] : liveCenter;
+  const mapCenter = userLocation ? [userLocation.lat, userLocation.lng] : (selectedRoute.length > 0 ? [selectedRoute[0].lat, selectedRoute[0].lng] : liveCenter);
+
+  let userCoordsForPolyline = [];
+  if (userLocation && selectedRoute.length > 0) {
+    const dist = haversineDistance(userLocation, selectedRoute[0]);
+    if (dist <= 10) {
+      userCoordsForPolyline = [[userLocation.lat, userLocation.lng]];
+    }
+  }
 
   const planningPolyline = [
-    liveCenter, 
+    ...userCoordsForPolyline, 
     ...selectedRoute.map(p => [p.lat, p.lng]), 
-    ...(selectedRoute.length > 0 ? [liveCenter] : [])
+    ...(selectedRoute.length > 0 ? userCoordsForPolyline : [])
   ];
 
   const osrmPolyline = activeRouteLine 
@@ -127,8 +126,19 @@ export default function MapView({
     }
   }, [isNavigating, activePandal, selectedRoute, userLocation]);
 
-  const handleCheckIn = useCallback(async (pandalId) => {
-    const lastCheckIn = localStorage.getItem(`last_checkin_${pandalId}`);
+  const handleCheckIn = useCallback(async (pandal) => {
+    // Geofence check
+    if (!userLocation) {
+      alert('আপনার লাইভ লোকেশন পাওয়া যাচ্ছে না। দয়া করে GPS অন করুন।');
+      return;
+    }
+    const distMeters = haversineDistance(userLocation, pandal) * 1000;
+    if (distMeters > 120) {
+      alert(`আপনি মণ্ডপ থেকে অনেক দূরে আছেন (${Math.round(distMeters)} মিটার)। ১২০ মিটারের মধ্যে এলে চেক-ইন করতে পারবেন।`);
+      return;
+    }
+
+    const lastCheckIn = safeStorage.get(`last_checkin_${pandal.id}`);
     const now = Date.now();
     // 2 hours cooldown
     if (lastCheckIn && (now - parseInt(lastCheckIn)) < 2 * 60 * 60 * 1000) {
@@ -138,15 +148,20 @@ export default function MapView({
 
     try {
       if (isSupabaseConfigured) {
-        await supabase.from('pandal_visits').insert([{ pandal_id: String(pandalId) }]);
+        let visitorId = safeStorage.get('puja_visitor_id');
+        if (!visitorId) {
+          visitorId = crypto.randomUUID();
+          safeStorage.set('puja_visitor_id', visitorId);
+        }
+        await supabase.from('pandal_visits').insert([{ pandal_id: String(pandal.id), user_uuid: visitorId }]);
       }
-      localStorage.setItem(`last_checkin_${pandalId}`, now.toString());
+      safeStorage.set(`last_checkin_${pandal.id}`, now.toString());
       alert('চেক-ইন সফল হয়েছে!');
     } catch (err) {
       console.error(err);
       alert('চেক-ইন করতে সমস্যা হয়েছে।');
     }
-  }, []);
+  }, [userLocation]);
 
   // Determine which polyline to show during navigation
   const navigationPolyline = osrmError && haversinePolyline 
@@ -170,19 +185,21 @@ export default function MapView({
           maxZoom={22}
         />
         
-        <AutoCenterMap position={mapCenter} isNavigating={isNavigating} />
+        <AutoCenterMap position={mapCenter} isNavigating={isNavigating} userLocation={userLocation} selectedRoute={selectedRoute} />
 
-        <Marker 
-          position={mapCenter} 
-          icon={isNavigating ? getLivePulseIcon(userLocation?.heading || 0) : planningUserIcon}
-          zIndexOffset={1000}
-        >
-          {!isNavigating && (
-            <Popup>
-              <div className="text-center font-bold text-gray-800">আপনার বর্তমান অবস্থান</div>
-            </Popup>
-          )}
-        </Marker>
+        {userLocation && (
+          <Marker 
+            position={mapCenter} 
+            icon={isNavigating ? getLivePulseIcon(userLocation.heading || 0) : planningUserIcon}
+            zIndexOffset={1000}
+          >
+            {!isNavigating && (
+              <Popup>
+                <div className="text-center font-bold text-gray-800">আপনার বর্তমান অবস্থান</div>
+              </Popup>
+            )}
+          </Marker>
+        )}
 
         {!isNavigating && selectedRoute.length > 0 && (
           <Polyline 
@@ -230,6 +247,8 @@ export default function MapView({
           const isAdded = selectedRoute.some(p => p.id === pandal.id);
           const routeIndex = selectedRoute.findIndex(p => p.id === pandal.id);
           const count = liveCounts[pandal.id] || 0;
+          const distMeters = userLocation ? haversineDistance(userLocation, pandal) * 1000 : Infinity;
+          const checkInText = (distMeters >= 75 && distMeters <= 120) ? 'আমি মণ্ডপের কাছেই আছি (Check-in)' : 'চেক-ইন';
 
           return (
             <Marker 
@@ -261,10 +280,10 @@ export default function MapView({
 
                     <div className="grid grid-cols-2 gap-2 text-xs mb-1">
                       <button 
-                        onClick={() => handleCheckIn(pandal.id)}
+                        onClick={() => handleCheckIn(pandal)}
                         className="bg-stone-100 hover:bg-green-50 hover:text-green-700 text-stone-700 border border-stone-200 py-1.5 rounded-md font-semibold flex items-center justify-center gap-1 transition-colors"
                       >
-                        <CheckCircle className="w-3.5 h-3.5" /> চেক-ইন
+                        <CheckCircle className="w-3.5 h-3.5" /> {checkInText}
                       </button>
                       <button 
                         onClick={() => setReviewPandal(pandal)}

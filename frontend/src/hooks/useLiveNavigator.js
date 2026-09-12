@@ -13,9 +13,20 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
   const [activeRouteLine, setActiveRouteLine] = useState(null); // Sliced line for rendering
   const [currentManeuver, setCurrentManeuver] = useState(null);
   const [distanceToTarget, setDistanceToTarget] = useState(null);
-  const [isVoiceMuted, setIsVoiceMuted] = useState(false);
+  const [isVoiceMuted, setIsVoiceMutedState] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [osrmError, setOsrmError] = useState(false);
+  const [gpsPermissionDenied, setGpsPermissionDenied] = useState(false);
+
+  const isVoiceMutedRef = useRef(false);
+  const setIsVoiceMuted = (val) => {
+    setIsVoiceMutedState(val);
+    isVoiceMutedRef.current = val;
+    if (val && typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel(); // Instantly stop talking if muted
+      setIsSpeaking(false);
+    }
+  };
 
   const wakeLockRef = useRef(null);
   const watchIdRef = useRef(null);
@@ -23,6 +34,8 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
   const socketRef = useRef(null);
   const pollingIntervalRef = useRef(null);
   const liveCountsRef = useRef({});
+  const lastOsrmFailTimeRef = useRef(0);
+  const consecutiveArrivalsRef = useRef(0);
 
   const activePandal = optimizedRoute[currentStopIndex] || null;
 
@@ -65,7 +78,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
 
   // Speak Bengali Function
   const speakPrompt = useCallback((text) => {
-    if (isVoiceMuted || typeof window === 'undefined' || !window.speechSynthesis) return;
+    if (isVoiceMutedRef.current || typeof window === 'undefined' || !window.speechSynthesis) return;
     
     // Debounce exact same phrases to prevent spam
     if (lastSpokenManeuverRef.current === text) return;
@@ -95,7 +108,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
     setTimeout(() => {
       lastSpokenManeuverRef.current = '';
     }, 15000);
-  }, [isVoiceMuted]);
+  }, [lang]);
 
   // Request Wake Lock
   const requestWakeLock = async () => {
@@ -117,6 +130,10 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
 
   const startTour = () => {
     if (optimizedRoute.length === 0) return;
+    if (gpsPermissionDenied || !userLocation) {
+      console.warn('Cannot start live navigation: GPS denied or user location unavailable.');
+      return;
+    }
     setIsNavigating(true);
     setCurrentStopIndex(0);
     setOsrmError(false);
@@ -169,6 +186,12 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
     if (!isNavigating || !activePandal) return;
 
     const success = async (position) => {
+      // 1. Ignore inaccurate GPS readings (Bounce Protection)
+      if (position.coords.accuracy && position.coords.accuracy > 50) {
+        console.warn('GPS reading ignored due to low accuracy:', position.coords.accuracy);
+        return;
+      }
+
       const rawLat = position.coords.latitude;
       const rawLng = position.coords.longitude;
       const heading = position.coords.heading || 0;
@@ -180,33 +203,46 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
       const distMeters = Math.round(distKm * 1000);
       setDistanceToTarget(distMeters);
 
-      if (distMeters <= 30) {
-        speakPrompt(t('arrive', { name: getPandalName(activePandal) }));
-        return;
+      // 2. Ghost Arrival Protection (<= 35m for 2 consecutive ticks)
+      if (distMeters <= 35) {
+        consecutiveArrivalsRef.current += 1;
+        if (consecutiveArrivalsRef.current >= 2) {
+          speakPrompt(t('arrive', { name: getPandalName(activePandal) }));
+          consecutiveArrivalsRef.current = 0; // reset
+          return;
+        }
+      } else {
+        consecutiveArrivalsRef.current = 0;
       }
 
       // Fetch OSRM route once — use ref lock to prevent parallel calls
       let currentRouteData = routeDataRef.current;
 
       if (!currentRouteData && !isFetchingRef.current) {
-        isFetchingRef.current = true;
-        const route = await fetchOSRMRoute([rawLng, rawLat], [activePandal.lng, activePandal.lat]);
-        isFetchingRef.current = false;
-        
-        if (route) {
-          setRouteData(route);
-          currentRouteData = route;
-          routeDataRef.current = route; // update ref immediately
-          setOsrmError(false);
-          if (route.legs && route.legs[0].steps.length > 0) {
-            const step = route.legs[0].steps[0];
-            const parsed = parseManeuver(step, t);
-            setCurrentManeuver(parsed);
-            speakPrompt(parsed.text);
-          }
-        } else {
-          // OSRM failed (likely 429 rate limit)
+        // 3. OSRM Rate Limit 30-Second Backoff
+        if (Date.now() - lastOsrmFailTimeRef.current < 30000) {
           setOsrmError(true);
+        } else {
+          isFetchingRef.current = true;
+          const route = await fetchOSRMRoute([rawLng, rawLat], [activePandal.lng, activePandal.lat]);
+          isFetchingRef.current = false;
+          
+          if (route) {
+            setRouteData(route);
+            currentRouteData = route;
+            routeDataRef.current = route; // update ref immediately
+            setOsrmError(false);
+            if (route.legs && route.legs[0].steps.length > 0) {
+              const step = route.legs[0].steps[0];
+              const parsed = parseManeuver(step, t);
+              setCurrentManeuver(parsed);
+              speakPrompt(parsed.text);
+            }
+          } else {
+            // OSRM failed (likely 429 rate limit)
+            setOsrmError(true);
+            lastOsrmFailTimeRef.current = Date.now();
+          }
         }
       }
 
@@ -245,10 +281,12 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
 
     const error = (err) => {
       console.warn('GPS Error:', err);
-      // GPS denied — use Bardhaman town centre as dummy location so OSRM can fetch
-      success({
-        coords: { latitude: 23.6183691, longitude: 88.1185789, heading: 45 }
-      });
+      setGpsPermissionDenied(true);
+      if (optimizedRoute && optimizedRoute.length > 0) {
+        success({
+          coords: { latitude: optimizedRoute[0].lat, longitude: optimizedRoute[0].lng, heading: 0, accuracy: 10 }
+        });
+      }
     };
 
     watchIdRef.current = navigator.geolocation.watchPosition(success, error, {
@@ -295,6 +333,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
     setIsVoiceMuted,
     isSpeaking,
     osrmError,
+    gpsPermissionDenied,
     liveCounts: liveCountsRef.current
   };
 }

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Volume2, VolumeX, ArrowUp, ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight, MapPin, X, FastForward, CheckCircle, ExternalLink } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import CheckInModal from './CheckInModal';
+import { safeStorage } from '@/utils/storage';
 
 // Map icon strings from navigationEngine to actual lucide components
 const IconMap = {
@@ -31,14 +32,21 @@ export default function LiveNavigationHUD({ navState, totalStops }) {
 
   if (!activePandal) return null;
 
-  const isArrived = distanceToTarget !== null && distanceToTarget <= 30;
+  const isArrived = distanceToTarget !== null && distanceToTarget <= 75;
   
   // Show modal if arrived, haven't dismissed it for this pandal, and haven't checked in recently
-  const hasCheckedIn = typeof window !== 'undefined' && localStorage.getItem(`last_checkin_${activePandal.id}`) !== null;
+  const hasCheckedIn = safeStorage.get(`last_checkin_${activePandal.id}`) !== null;
   const showModal = isArrived && modalDismissedFor !== activePandal.id && !hasCheckedIn;
 
   // Resolve icon component
   const ManeuverIcon = currentManeuver && IconMap[currentManeuver.icon] ? IconMap[currentManeuver.icon] : ArrowUp;
+
+  // Auto-mute when checked in to prevent spamming instructions while user is inside pandal
+  React.useEffect(() => {
+    if (hasCheckedIn && !isVoiceMuted) {
+      setIsVoiceMuted(true);
+    }
+  }, [hasCheckedIn, isVoiceMuted, setIsVoiceMuted]);
 
   return (
     <>
@@ -89,6 +97,11 @@ export default function LiveNavigationHUD({ navState, totalStops }) {
               <h2 className="text-2xl font-extrabold text-gray-900">
                 {lang === 'en' ? activePandal.name_en || activePandal.name : activePandal.name_bn || activePandal.name}
               </h2>
+              {hasCheckedIn && (
+                <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full w-fit">
+                  <CheckCircle className="w-3 h-3" /> {lang === 'en' ? 'Check-in Complete' : 'দর্শন সম্পন্ন'}
+                </span>
+              )}
               <span className="text-gray-500 text-sm flex items-center gap-1 mt-1">
                 <MapPin className="w-4 h-4" /> {activePandal.zone}
               </span>
@@ -116,12 +129,24 @@ export default function LiveNavigationHUD({ navState, totalStops }) {
             >
               <X className="w-5 h-5" /> {t('end')}
             </button>
-            <button 
-              onClick={skipToNext}
-              className="flex-[2] py-3 bg-gradient-to-r from-red-700 to-red-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 transition-all hover:scale-[1.02]"
-            >
-              {currentStopIndex === totalStops - 1 ? t('tour_complete') : t('skip')} <FastForward className="w-5 h-5" />
-            </button>
+            {hasCheckedIn ? (
+              <button 
+                onClick={() => {
+                  setIsVoiceMuted(false);
+                  skipToNext();
+                }}
+                className="flex-[2] py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-green-900/20 transition-all hover:scale-[1.02]"
+              >
+                {currentStopIndex === totalStops - 1 ? (lang === 'en' ? 'Tour Complete' : 'সফর শেষ') : (lang === 'en' ? 'Next Pandal ➔' : 'পরবর্তী মণ্ডপে চলুন ➔')}
+              </button>
+            ) : (
+              <button 
+                onClick={skipToNext}
+                className="flex-[2] py-3 bg-gradient-to-r from-red-700 to-red-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 transition-all hover:scale-[1.02]"
+              >
+                {currentStopIndex === totalStops - 1 ? t('tour_complete') : t('skip')} <FastForward className="w-5 h-5" />
+              </button>
+            )}
           </div>
           
           <button 
