@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Volume2, VolumeX, ArrowUp, ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight, MapPin, X, FastForward, CheckCircle, ExternalLink } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import CheckInModal from './CheckInModal';
@@ -92,7 +92,7 @@ export default function LiveNavigationHUD({ navState, totalStops }) {
 
       {/* Bottom Drawer - Tour Status */}
       <div className="absolute bottom-4 left-4 right-4 z-[999] flex justify-center pointer-events-none">
-        <div className="bg-white/95 backdrop-blur-md shadow-2xl shadow-gray-900/20 rounded-[2rem] p-5 w-full max-w-md pointer-events-auto border border-gray-200">
+        <div id="planner-drawer" className="bg-white/95 backdrop-blur-md shadow-2xl shadow-gray-900/20 rounded-[2rem] p-5 w-full max-w-md pointer-events-auto border border-gray-200">
           
           <div className="flex justify-between items-center mb-4">
             <div className="flex flex-col">

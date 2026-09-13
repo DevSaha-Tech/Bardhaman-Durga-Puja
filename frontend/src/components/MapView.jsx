@@ -56,10 +56,41 @@ const routeIcon = new L.Icon({
 // Auto-Pan Component
 function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute }) {
   const map = useMap();
-  
+  const [isUserPanning, setIsUserPanning] = useState(false);
+
+  useEffect(() => {
+    const handlePanStart = () => setIsUserPanning(true);
+    map.on('dragstart', handlePanStart);
+    map.on('zoomstart', handlePanStart);
+    
+    return () => {
+      map.off('dragstart', handlePanStart);
+      map.off('zoomstart', handlePanStart);
+    };
+  }, [map]);
+
   useEffect(() => {
     if (isNavigating && position) {
-      map.setView(position, map.getZoom() > 16 ? map.getZoom() : 18, {
+      if (isUserPanning) return; // Guard for fix 1
+
+      const zoom = map.getZoom() > 16 ? map.getZoom() : 18;
+      
+      // Calculate drawer height
+      let drawerHeight = 220; // Fallback
+      if (typeof document !== 'undefined') {
+        const hudElement = document.getElementById('planner-drawer');
+        if (hudElement) {
+          drawerHeight = hudElement.getBoundingClientRect().height + 32;
+        }
+      }
+
+      // Offset camera to keep user pin above the drawer
+      const latLng = L.latLng(position[0], position[1]);
+      const targetPoint = map.project(latLng, zoom);
+      targetPoint.y += drawerHeight / 2;
+      const offsetLatLng = map.unproject(targetPoint, zoom);
+
+      map.setView(offsetLatLng, zoom, {
         animate: true,
         duration: 0.5,
       });
@@ -70,9 +101,25 @@ function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute }) 
     } else if (userLocation) {
       map.setView([userLocation.lat, userLocation.lng], 16, { animate: true });
     }
-  }, [position, isNavigating, userLocation, selectedRoute, map]);
+  }, [position, isNavigating, userLocation, selectedRoute, map, isUserPanning]);
 
-  return null;
+  return isUserPanning && isNavigating ? (
+    <div className="leaflet-bottom leaflet-right mb-72 mr-4 pointer-events-auto z-[1000]">
+      <div className="leaflet-control leaflet-bar border-none shadow-xl rounded-full bg-white overflow-hidden">
+        <button 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsUserPanning(false);
+          }}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 pointer-events-auto"
+          title="Re-centre"
+        >
+          <Navigation className="w-4 h-4" /> Re-centre
+        </button>
+      </div>
+    </div>
+  ) : null;
 }
 
 // Locate Me Component

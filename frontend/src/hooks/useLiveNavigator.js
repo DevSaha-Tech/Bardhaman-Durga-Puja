@@ -189,7 +189,6 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
               const step = route.legs[0].steps[0];
               const parsed = parseManeuver(step, t);
               setCurrentManeuver(parsed);
-              speakPrompt(parsed.text);
             }
           } else {
             setOsrmError(true);
