@@ -20,7 +20,7 @@ export const metadata = {
   openGraph: {
     title: "Durga Puja Route Optimizer",
     description: "Plan your perfect Durga Puja route efficiently. Find the best paths between pandals and avoid crowds.",
-    url: "https://durgapuja.optimizer.com",
+    url: "https://puja.devsaha.tech",
     siteName: "Durga Puja Optimizer",
     locale: "en_US",
     type: "website",

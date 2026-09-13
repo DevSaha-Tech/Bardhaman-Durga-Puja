@@ -124,7 +124,13 @@ export default function MapView({
   const [osrmError, setOsrmError] = useState(false);
   const [haversinePolyline, setHaversinePolyline] = useState(null);
   
-  const liveCenter = [23.6183691, 88.1185789];
+  // Safe project-level location fallback strategy based on currently loaded data.
+  // Limitation: Defaults to Bardhaman if pandalsData is completely empty. Will naturally 
+  // center on whichever region's data (Bardhaman/Katwa) is loaded in the array.
+  const fallbackLat = pandalsData && pandalsData.length > 0 ? pandalsData[0].lat : 23.2324;
+  const fallbackLng = pandalsData && pandalsData.length > 0 ? pandalsData[0].lng : 87.8615;
+  const liveCenter = [fallbackLat, fallbackLng];
+
   const mapCenter = userLocation ? [userLocation.lat, userLocation.lng] : (selectedRoute.length > 0 ? [selectedRoute[0].lat, selectedRoute[0].lng] : liveCenter);
 
   let userCoordsForPolyline = [];

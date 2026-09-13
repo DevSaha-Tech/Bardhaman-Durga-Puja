@@ -222,7 +222,9 @@ export default function PlannerSection() {
 
   const handleSingleDirection = (pandal) => {
     const mode = transportMode === 'driving' ? 'driving' : transportMode === 'cycling' ? 'bicycling' : 'walking';
-    window.open(`https://www.google.com/maps/dir/?api=1&origin=${liveCenter.lat},${liveCenter.lng}&destination=${pandal.lat},${pandal.lng}&travelmode=${mode}`, '_blank');
+    const originLoc = liveNavState?.userLocation || startLocation;
+    const originParam = originLoc ? `&origin=${originLoc.lat},${originLoc.lng}` : '';
+    window.open(`https://www.google.com/maps/dir/?api=1${originParam}&destination=${pandal.lat},${pandal.lng}&travelmode=${mode}`, '_blank');
   };
 
   const pName = (p) => lang === 'en' ? (p.name_en || p.name) : (p.name_bn || p.name);
