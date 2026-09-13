@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
@@ -61,6 +61,7 @@ const BUDGET_OPTIONS = [
 ];
 
 import { useRoutePersistence } from '../hooks/useRoutePersistence';
+import { useGeolocation } from '../hooks/useGeolocation';
 
 // Arrival time helper
 function getArrivalTime(addMin, lang) {
@@ -76,7 +77,7 @@ export default function PlannerSection() {
   const [isMounted, setIsMounted] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(true);
   const [touchStartY, setTouchStartY] = useState(null);
-  const [startLocation, setStartLocation] = useState(null);
+  const { position: startLocation, error: gpsError, permission: gpsPermission } = useGeolocation({ mode: 'once' });
 
   const handleTouchStart = (e) => setTouchStartY(e.touches[0].clientY);
   const handleTouchEnd = (e) => {
@@ -102,21 +103,7 @@ export default function PlannerSection() {
   // Fix Hydration Error
   useEffect(() => setIsMounted(true), []);
 
-  // Get actual GPS Location dynamically
-  useEffect(() => {
-    if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setStartLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (err) => {
-          console.warn('GPS denied or unavailable. Planner will run in Preview Mode.', err);
-          setStartLocation(null); // Keep it explicitly null
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
-    } else {
-      setStartLocation(null);
-    }
-  }, [pandalsData]);
+  
 
   // Helper updaters
   const setPlannerTab = (val) => updateRouteState({ plannerTab: val });
@@ -231,8 +218,13 @@ export default function PlannerSection() {
 
   if (!isMounted) return null; // Fix hydration mismatch by only rendering on client
 
-  return (
+    return (
     <section className="relative h-full w-full bg-stone-100 overflow-hidden">
+      {(gpsPermission === 'denied' || (gpsError && gpsError.includes('denied'))) && (
+        <div className="absolute top-0 left-0 right-0 z-[60] bg-red-600 text-white px-4 py-3 text-center text-sm shadow-md font-medium">
+          Location access denied. Enable it in your browser to plan a route from your position.
+        </div>
+      )}
 
       {/* MAP */}
       <div className="absolute inset-0 z-0">
@@ -491,7 +483,7 @@ export default function PlannerSection() {
                 onClick={() => {
                   if (typeof navigator !== 'undefined' && navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(
-                      (pos) => setStartLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                      (pos) => window.location.reload(),
                       (err) => {
                         console.warn('GPS prompt from button denied:', err);
                         Swal.fire({
@@ -546,3 +538,5 @@ export default function PlannerSection() {
     </section>
   );
 }
+
+

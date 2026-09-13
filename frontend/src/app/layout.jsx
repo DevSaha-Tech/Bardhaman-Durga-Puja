@@ -15,8 +15,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Durga Puja & Festival Route Optimizer",
-  description: "Optimize your pandal hopping route using our advanced 2-Opt TSP engine.",
+  metadataBase: new URL('https://puja.devsaha.tech'),
+  title: "Bardhaman Durga Puja 2026 — Pandal Guide & Route Planner",
+  description: "Find and plan the best Durga Puja pandal route in Bardhaman. Free, no login, works offline.",
+  alternates: {
+    canonical: 'https://puja.devsaha.tech',
+  },
   openGraph: {
     title: "Durga Puja Route Optimizer",
     description: "Plan your perfect Durga Puja route efficiently. Find the best paths between pandals and avoid crowds.",

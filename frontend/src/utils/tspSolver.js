@@ -1,10 +1,5 @@
+﻿import { APP_CONFIG } from '../config/appConfig';
 import * as turf from '@turf/turf';
-
-const SPEEDS = {
-  walking: 5, // km/h
-  bike: 15, // km/h
-  car: 20 // km/h
-};
 
 const OSRM_BASE_URL = 'https://router.project-osrm.org';
 
@@ -45,7 +40,7 @@ export async function fetchOSRMRoute(startLng, startLat, endLng, endLat, mode = 
 
   // Fallback to straight line (Haversine)
   const distKm = getDistanceFallback({lng: startLng, lat: startLat}, {lng: endLng, lat: endLat});
-  const speed = SPEEDS[mode] || SPEEDS.walking;
+  const speed = APP_CONFIG.speeds[mode] || APP_CONFIG.speeds.walking;
   const durationMin = (distKm / speed) * 60;
   
   return {
@@ -64,25 +59,45 @@ export async function fetchOSRMRoute(startLng, startLat, endLng, endLat, mode = 
 export function optimizeRouteTSP(points) {
   if (points.length <= 2) return points;
 
-  let route = [...points];
-  let improved = true;
+  let current = points[0];
+  let unvisited = points.slice(1);
+  let route = [current];
 
-  while (improved) {
+  while (unvisited.length > 0) {
+    let closestIdx = -1;
+    let minDist = Infinity;
+    for (let i = 0; i < unvisited.length; i++) {
+      const d = getDistanceFallback(current, unvisited[i]);
+      if (d < minDist) {
+        minDist = d;
+        closestIdx = i;
+      }
+    }
+    current = unvisited[closestIdx];
+    route.push(current);
+    unvisited.splice(closestIdx, 1);
+  }
+
+  let improved = true;
+  let iterations = 0;
+  
+  while (improved && iterations < 100) {
     improved = false;
+    iterations++;
     for (let i = 1; i < route.length - 1; i++) {
       for (let k = i + 1; k < route.length; k++) {
         const d_i_prev = getDistanceFallback(route[i - 1], route[i]);
-        const d_k_next = k + 1 < route.length ? getDistanceFallback(route[k], route[k + 1]) : 0;
+        const next_k = (k + 1 < route.length) ? route[k + 1] : route[0];
+        const d_k_next = getDistanceFallback(route[k], next_k);
         
         const d_i_prev_new = getDistanceFallback(route[i - 1], route[k]);
-        const d_k_next_new = k + 1 < route.length ? getDistanceFallback(route[i], route[k + 1]) : 0;
+        const next_i = (k + 1 < route.length) ? route[k + 1] : route[0];
+        const d_k_next_new = getDistanceFallback(route[i], next_i);
 
-        // Note: this is a simple TSP for open path (not returning to start)
         const oldDist = d_i_prev + d_k_next;
         const newDist = d_i_prev_new + d_k_next_new;
 
-        if (newDist < oldDist) {
-          // reverse sub-route i to k
+        if (newDist < oldDist - 0.0001) {
           const reversed = route.slice(i, k + 1).reverse();
           route.splice(i, reversed.length, ...reversed);
           improved = true;
@@ -101,7 +116,7 @@ export function calculateTimeBudget(routeParams) {
 
   for (let i = 0; i < route.length - 1; i++) {
     const dist = getDistanceFallback(route[i], route[i+1]);
-    const travelMin = (dist / (SPEEDS[mode] || SPEEDS.walking)) * 60;
+    const travelMin = (dist / (APP_CONFIG.speeds[mode] || APP_CONFIG.speeds.walking)) * 60;
     totalTravelTime += travelMin * roadCrowdMultiplier;
   }
 
@@ -126,36 +141,62 @@ export function solveTsp(nodes, mode) {
   return optimizeRouteTSP(nodes);
 }
 
+
 export function filterTopN(pandals, n, userLocation) {
-  let sorted = [...pandals];
-  if (userLocation) {
-    sorted.sort((a, b) => haversineDistance(userLocation, a) - haversineDistance(userLocation, b));
-  } else {
-    sorted.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-  }
-  return n ? sorted.slice(0, n) : sorted;
+  // Top-N guarantees best 5 by ranking, completely excluding distance logic.
+  let validPandals = pandals.filter(p => typeof p.rank === 'number');
+  validPandals.sort((a, b) => a.rank - b.rank);
+  return n ? validPandals.slice(0, n) : validPandals;
 }
 
 export function solveBudget(startNode, pandals, budgetMin, mode) {
-  const sorted = filterTopN(pandals, null);
-  const selected = [];
-  let currentMin = 0;
-  let currentPos = startNode;
   const speedMode = mode === 'cycling' ? 'bike' : mode === 'driving' ? 'car' : 'walking';
-  const speed = SPEEDS[speedMode] || 5;
+  const speed = APP_CONFIG.speeds[speedMode] || 5;
 
-  for (const p of sorted) {
-    const dist = getDistanceFallback(currentPos, p);
-    const travelMin = (dist / speed) * 60;
-    const dwellMin = p.dwellMinutes || 20;
-
-    if (currentMin + travelMin + dwellMin <= budgetMin) {
-      selected.push(p);
-      currentMin += travelMin + dwellMin;
-      currentPos = p;
+  let unvisited = filterTopN(pandals, null);
+  const selected = [];
+  let currentPos = startNode;
+  
+  let totalMin = 0;
+  
+  while (unvisited.length > 0) {
+    let closestIdx = -1;
+    let minDist = Infinity;
+    
+    for (let i = 0; i < unvisited.length; i++) {
+      const d = getDistanceFallback(currentPos, unvisited[i]);
+      if (d < minDist) {
+        minDist = d;
+        closestIdx = i;
+      }
+    }
+    
+    const candidate = unvisited[closestIdx];
+    const distToCand = minDist;
+    const travelMin = (distToCand / speed) * 60 * (1 + APP_CONFIG.planner.trafficBuffer);
+    const dwellMin = candidate.visit?.dwellMinutes || candidate.dwellMinutes || 20;
+    
+    const distToHome = getDistanceFallback(candidate, startNode);
+    const returnTravelMin = (distToHome / speed) * 60 * (1 + APP_CONFIG.planner.trafficBuffer);
+    
+    if (totalMin + travelMin + dwellMin + returnTravelMin <= budgetMin) {
+      selected.push(candidate);
+      totalMin += travelMin + dwellMin;
+      currentPos = candidate;
+      unvisited.splice(closestIdx, 1);
+    } else {
+      unvisited.splice(closestIdx, 1);
     }
   }
-  return { selected, stats: calcItinerary(startNode, selected, mode), trimmedCount: pandals.length - selected.length };
+
+  const optimizedNodes = optimizeRouteTSP([startNode, ...selected]);
+  const finalSelected = optimizedNodes.slice(1);
+  
+  return { 
+    selected: finalSelected, 
+    stats: calcItinerary(startNode, finalSelected, mode), 
+    trimmedCount: pandals.length - finalSelected.length 
+  };
 }
 
 export function calcItinerary(startNode, route, mode) {
@@ -165,17 +206,19 @@ export function calcItinerary(startNode, route, mode) {
   let cumMinutes = 0;
   const legs = [];
 
+  const speedMode = mode === 'cycling' ? 'bike' : mode === 'driving' ? 'car' : 'walking';
+  const speed = APP_CONFIG.speeds[speedMode] || 5;
+
   let current = startNode;
   for (const p of route) {
     if (p.id === 'END' || p.id === '__START__') continue;
     const dist = getDistanceFallback(current, p);
-    const travelMin = (dist / (SPEEDS[mode === 'cycling' ? 'bike' : mode === 'driving' ? 'car' : 'walking'] || 5)) * 60;
-    const dwellMin = p.dwellMinutes || 20;
+    const travelMin = (dist / speed) * 60 * (1 + APP_CONFIG.planner.trafficBuffer);
+    const dwellMin = p.visit?.dwellMinutes || p.dwellMinutes || 20;
     
     totalDistKm += dist;
     totalTravelMin += travelMin;
     totalDwellMin += dwellMin;
-    
     cumMinutes += travelMin + dwellMin;
     
     legs.push({
@@ -187,6 +230,23 @@ export function calcItinerary(startNode, route, mode) {
     });
     
     current = p;
+  }
+
+  if (route.length > 0) {
+    const returnDist = getDistanceFallback(current, startNode);
+    const returnTravelMin = (returnDist / speed) * 60 * (1 + APP_CONFIG.planner.trafficBuffer);
+    
+    totalDistKm += returnDist;
+    totalTravelMin += returnTravelMin;
+    cumMinutes += returnTravelMin;
+    
+    legs.push({
+      pandal: { id: '__START__', name: 'Return to Start', name_bn: 'Return to Start', name_en: 'Return to Start', lat: startNode.lat, lng: startNode.lng },
+      distKm: returnDist.toFixed(2),
+      travelMin: Math.round(returnTravelMin),
+      dwellMin: 0,
+      cumMinutes: Math.round(cumMinutes)
+    });
   }
 
   return {
@@ -207,3 +267,5 @@ export function formatDuration(minutes, lang) {
   }
   return hrs > 0 ? `${hrs} ঘণ্টা ${mins} মি` : `${mins} মি`;
 }
+
+

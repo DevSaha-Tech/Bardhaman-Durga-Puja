@@ -1,5 +1,7 @@
 "use client";
 
+import { APP_CONFIG } from '../config/appConfig';
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -124,14 +126,24 @@ export default function MapView({
   const [osrmError, setOsrmError] = useState(false);
   const [haversinePolyline, setHaversinePolyline] = useState(null);
   
-  // Safe project-level location fallback strategy based on currently loaded data.
-  // Limitation: Defaults to Bardhaman if pandalsData is completely empty. Will naturally 
-  // center on whichever region's data (Bardhaman/Katwa) is loaded in the array.
-  const fallbackLat = pandalsData && pandalsData.length > 0 ? pandalsData[0].lat : 23.2324;
-  const fallbackLng = pandalsData && pandalsData.length > 0 ? pandalsData[0].lng : 87.8615;
-  const liveCenter = [fallbackLat, fallbackLng];
+  const getMapCenterAndZoom = () => {
+    if (userLocation) return { center: [userLocation.lat, userLocation.lng], zoom: 14 };
+    if (!pandalsData || pandalsData.length === 0) return { center: [23.2324, 87.8615], zoom: 11 };
+    
+    let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
+    pandalsData.forEach(p => {
+      if (p.lat < minLat) minLat = p.lat;
+      if (p.lat > maxLat) maxLat = p.lat;
+      if (p.lng < minLng) minLng = p.lng;
+      if (p.lng > maxLng) maxLng = p.lng;
+    });
+    const midLat = (minLat + maxLat) / 2;
+    const midLng = (minLng + maxLng) / 2;
+    return { center: [midLat, midLng], zoom: 12 };
+  };
 
-  const mapCenter = userLocation ? [userLocation.lat, userLocation.lng] : (selectedRoute.length > 0 ? [selectedRoute[0].lat, selectedRoute[0].lng] : liveCenter);
+  const { center: mapCenter, zoom: mapZoom } = getMapCenterAndZoom();
+  const liveCenter = mapCenter; // fallback reference for haversine origin
 
   let userCoordsForPolyline = [];
   if (userLocation && selectedRoute.length > 0) {
@@ -203,7 +215,7 @@ export default function MapView({
     <>
       <MapContainer 
         center={mapCenter} 
-        zoom={17} 
+        zoom={mapZoom} 
         maxZoom={19}
         zoomControl={!isNavigating}
         style={{ height: '100%', width: '100%' }}
@@ -232,7 +244,7 @@ export default function MapView({
           >
             {!isNavigating && (
               <Popup>
-                <div className="text-center font-bold text-gray-800">আপনার বর্তমান অবস্থান</div>
+                <div className="text-center font-bold text-gray-800">Your Location</div>
               </Popup>
             )}
           </Marker>
@@ -361,3 +373,4 @@ export default function MapView({
     </>
   );
 }
+

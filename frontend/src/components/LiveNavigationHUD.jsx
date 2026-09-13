@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Volume2, VolumeX, ArrowUp, ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight, MapPin, X, FastForward, CheckCircle, ExternalLink } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import CheckInModal from './CheckInModal';
 import { safeStorage } from '@/utils/storage';
+import { APP_CONFIG } from '../config/appConfig';
 
 // Map icon strings from navigationEngine to actual lucide components
 const IconMap = {
@@ -17,14 +18,18 @@ const IconMap = {
 export default function LiveNavigationHUD({ navState, totalStops }) {
   const { 
     activePandal, 
+    nextPandal,
     currentManeuver, 
     distanceToTarget, 
+    distanceMeters,
+    etaMinutes,
     currentStopIndex, 
     isVoiceMuted, 
     setIsVoiceMuted, 
     isSpeaking,
     endTour, 
-    skipToNext 
+    skipToNext,
+    userLocation
   } = navState;
   
   const { lang, t } = useLanguage();
@@ -110,7 +115,7 @@ export default function LiveNavigationHUD({ navState, totalStops }) {
                <span className="block text-2xl font-bold text-gray-900">
                  {distanceToTarget !== null ? (distanceToTarget > 1000 ? (distanceToTarget/1000).toFixed(1) + 'km' : distanceToTarget + 'm') : '--'}
                </span>
-               <span className="block text-xs font-semibold text-gray-500">{t('distance')}</span>
+               <span className="block text-xs font-semibold text-gray-500">{t('distance')} &bull; ETA: {etaMinutes !== null ? etaMinutes + ' min' : '--'}</span>
             </div>
           </div>
 
@@ -150,7 +155,11 @@ export default function LiveNavigationHUD({ navState, totalStops }) {
           </div>
           
           <button 
-            onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${activePandal.lat},${activePandal.lng}`, '_blank')}
+            onClick={() => {
+              if (userLocation) {
+                window.open(`https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${nextPandal.lat},${nextPandal.lng}&travelmode=${APP_CONFIG.planner.defaultMode}`, '_blank');
+              }
+            }}
             className="w-full mt-3 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold rounded-xl flex items-center justify-center gap-2 transition-colors"
           >
             Google Maps-এ চলুন <ExternalLink className="w-4 h-4" />
@@ -161,3 +170,4 @@ export default function LiveNavigationHUD({ navState, totalStops }) {
     </>
   );
 }
+

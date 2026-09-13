@@ -3,8 +3,8 @@ import PlannerSection from '@/components/PlannerSection';
 import Footer from '@/components/Footer';
 
 export const metadata = {
-  title: 'রুট প্ল্যানার | Puja Parikrama 2026',
-  description: 'ইন্টারেক্টিভ ম্যাপ ও লাইভ নেভিগেশন',
+  title: "Plan Your Puja Route — Bardhaman 2026",
+  description: "Optimize your pandal route with live GPS and Bengali voice navigation.",
 };
 
 export default function PlannerPage() {

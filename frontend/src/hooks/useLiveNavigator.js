@@ -1,36 +1,28 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useGeolocation } from './useGeolocation';
 import * as turf from '@turf/turf';
 import { fetchOSRMRoute, parseManeuver, snapToRoute, clearRouteCache } from '../utils/navigationEngine';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { APP_CONFIG } from '../config/appConfig';
+import { useVoice } from './useVoice';
 
 export function useLiveNavigator(optimizedRoute, lang, t) {
   const [isNavigating, setIsNavigating] = useState(false);
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
-  const [userLocation, setUserLocation] = useState(null);
+  const { position: userLocation } = useGeolocation({ mode: 'watch' });
   const [routeData, setRouteData] = useState(null); // Full original OSRM route
   const [activeRouteLine, setActiveRouteLine] = useState(null); // Sliced line for rendering
   const [currentManeuver, setCurrentManeuver] = useState(null);
   const [distanceToTarget, setDistanceToTarget] = useState(null);
-  const [isVoiceMuted, setIsVoiceMutedState] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [osrmError, setOsrmError] = useState(false);
   const [gpsPermissionDenied, setGpsPermissionDenied] = useState(false);
 
-  const isVoiceMutedRef = useRef(false);
-  const setIsVoiceMuted = (val) => {
-    setIsVoiceMutedState(val);
-    isVoiceMutedRef.current = val;
-    if (val && typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel(); // Instantly stop talking if muted
-      setIsSpeaking(false);
-    }
-  };
+  const { speak: speakPrompt, isVoiceMuted, setIsVoiceMuted, isSpeaking } = useVoice({ lang });
 
   const wakeLockRef = useRef(null);
   const watchIdRef = useRef(null);
-  const lastSpokenManeuverRef = useRef('');
   const socketRef = useRef(null);
   const pollingIntervalRef = useRef(null);
   const liveCountsRef = useRef({});
@@ -63,10 +55,8 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
       }
     };
 
-    // Initial poll
     pollCounts();
     
-    // Poll every 60 seconds
     pollingIntervalRef.current = setInterval(pollCounts, 60000);
 
     return () => {
@@ -75,40 +65,6 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
       }
     };
   }, []);
-
-  // Speak Bengali Function
-  const speakPrompt = useCallback((text) => {
-    if (isVoiceMutedRef.current || typeof window === 'undefined' || !window.speechSynthesis) return;
-    
-    // Debounce exact same phrases to prevent spam
-    if (lastSpokenManeuverRef.current === text) return;
-
-    window.speechSynthesis.cancel(); // cancel previous
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    if (lang === 'en') {
-      utterance.lang = 'en-IN';
-      utterance.rate = 0.9; 
-      utterance.pitch = 1.0; 
-    } else {
-      utterance.lang = 'bn-IN';
-      utterance.rate = 0.8; // Slower for clarity
-      utterance.pitch = 0.8; // Slightly deeper, less robotic
-    }
-    
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-
-    window.speechSynthesis.speak(utterance);
-    
-    lastSpokenManeuverRef.current = text;
-    
-    // Clear debounce after 15 seconds
-    setTimeout(() => {
-      lastSpokenManeuverRef.current = '';
-    }, 15000);
-  }, [lang]);
 
   // Request Wake Lock
   const requestWakeLock = async () => {
@@ -174,27 +130,25 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
   };
 
   const routeDataRef  = useRef(null);
-  const isFetchingRef  = useRef(false); // prevent parallel OSRM calls
+  const isFetchingRef  = useRef(false);
 
-  // Sync routeData state → ref so async callbacks always read latest value
   useEffect(() => {
     routeDataRef.current = routeData;
   }, [routeData]);
 
   // Setup GPS Watcher and Route Fetching
   useEffect(() => {
-    if (!isNavigating || !activePandal) return;
-
-    const success = async (position) => {
+    if (!isNavigating || !activePandal || !userLocation) return;
+    const processGPS = async () => {
       // 1. Ignore inaccurate GPS readings (Bounce Protection)
-      if (position.coords.accuracy && position.coords.accuracy > 50) {
-        console.warn('GPS reading ignored due to low accuracy:', position.coords.accuracy);
+      if (userLocation.accuracy && userLocation.accuracy > 50) {
+        console.warn('GPS reading ignored due to low accuracy:', userLocation.accuracy);
         return;
       }
 
-      const rawLat = position.coords.latitude;
-      const rawLng = position.coords.longitude;
-      const heading = position.coords.heading || 0;
+      const rawLat = userLocation.lat;
+      const rawLng = userLocation.lng;
+      const heading = userLocation.heading || 0;
 
       const rawUserPoint = turf.point([rawLng, rawLat]);
       const targetPoint = turf.point([activePandal.lng, activePandal.lat]);
@@ -208,18 +162,17 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
         consecutiveArrivalsRef.current += 1;
         if (consecutiveArrivalsRef.current >= 2) {
           speakPrompt(t('arrive', { name: getPandalName(activePandal) }));
-          consecutiveArrivalsRef.current = 0; // reset
+          consecutiveArrivalsRef.current = 0;
           return;
         }
       } else {
         consecutiveArrivalsRef.current = 0;
       }
 
-      // Fetch OSRM route once — use ref lock to prevent parallel calls
+      // Fetch OSRM route once
       let currentRouteData = routeDataRef.current;
 
       if (!currentRouteData && !isFetchingRef.current) {
-        // 3. OSRM Rate Limit 30-Second Backoff
         if (Date.now() - lastOsrmFailTimeRef.current < 30000) {
           setOsrmError(true);
         } else {
@@ -230,7 +183,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
           if (route) {
             setRouteData(route);
             currentRouteData = route;
-            routeDataRef.current = route; // update ref immediately
+            routeDataRef.current = route;
             setOsrmError(false);
             if (route.legs && route.legs[0].steps.length > 0) {
               const step = route.legs[0].steps[0];
@@ -239,69 +192,40 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
               speakPrompt(parsed.text);
             }
           } else {
-            // OSRM failed (likely 429 rate limit)
             setOsrmError(true);
             lastOsrmFailTimeRef.current = Date.now();
           }
         }
       }
 
-      // Snap location & Slice Line & Detect Off-Route
       if (currentRouteData && currentRouteData.geometry) {
         try {
            const line = turf.lineString(currentRouteData.geometry.coordinates);
            const rawPoint = turf.point([rawLng, rawLat]);
            const snappedPoint = turf.nearestPointOnLine(line, rawPoint);
-           const snappedCoords = snappedPoint.geometry.coordinates; // [lng, lat]
+           const snappedCoords = snappedPoint.geometry.coordinates;
            
-           // 1. Off-Route Detection (if > 40 meters from snapped point)
            const distFromRoute = turf.distance(rawPoint, snappedPoint) * 1000;
            if (distFromRoute > 40 && !isFetchingRef.current) {
              console.warn('Off-route detected:', distFromRoute, 'meters');
              clearRouteCache();
              setRouteData(null);
              routeDataRef.current = null;
-             return; // Skip rest, next GPS tick will fetch fresh route!
+             return;
            }
 
-           // 2. Slice line from current location to target
            const targetPoint = turf.point([activePandal.lng, activePandal.lat]);
            const slicedLine = turf.lineSlice(snappedPoint, targetPoint, line);
            setActiveRouteLine(slicedLine.geometry.coordinates);
-
-           setUserLocation({ lat: snappedCoords[1], lng: snappedCoords[0], heading });
         } catch(e) {
            console.error('Turf slicing error:', e);
-           setUserLocation({ lat: rawLat, lng: rawLng, heading });
         }
-      } else {
-        setUserLocation({ lat: rawLat, lng: rawLng, heading });
       }
     };
+    processGPS();
+  }, [userLocation, isNavigating, activePandal]);
 
-    const error = (err) => {
-      console.warn('GPS Error:', err);
-      setGpsPermissionDenied(true);
-      if (optimizedRoute && optimizedRoute.length > 0) {
-        success({
-          coords: { latitude: optimizedRoute[0].lat, longitude: optimizedRoute[0].lng, heading: 0, accuracy: 10 }
-        });
-      }
-    };
-
-    watchIdRef.current = navigator.geolocation.watchPosition(success, error, {
-      enableHighAccuracy: true,
-      maximumAge: 2000,
-      timeout: 8000
-    });
-
-    return () => {
-      if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
-      isFetchingRef.current = false;
-    };
-  }, [isNavigating, activePandal]);
-
-  // Clear route cache when target pandal changes so a fresh route is fetched
+  // Clear route cache when target pandal changes
   useEffect(() => {
     if (activePandal) {
       setRouteData(null);
@@ -312,18 +236,41 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
       clearRouteCache();
     }
   }, [activePandal?.id]);
+
   useEffect(() => {
     setRouteData(null);
     setCurrentManeuver(null);
   }, [currentStopIndex]);
 
+  const speedKmH = APP_CONFIG.speeds[APP_CONFIG.planner.defaultMode] || 5;
+  const etaMinutes = distanceToTarget !== null ? Math.ceil(((distanceToTarget / 1000) / speedKmH) * 60) : null;
+
+  const announcedPandalRef = useRef(null);
+  useEffect(() => {
+    if (activePandal && distanceToTarget !== null && isNavigating) {
+      if (announcedPandalRef.current !== activePandal.id) {
+        announcedPandalRef.current = activePandal.id;
+        const name = lang === 'en' ? activePandal.name_en || activePandal.name : activePandal.name_bn || activePandal.name;
+        if (lang === 'en') {
+          speakPrompt(`Next pandal ${name}, ${distanceToTarget} meters ahead`);
+        } else {
+          speakPrompt(`পরবর্তী মণ্ডপ ${name}, আর ${distanceToTarget} মিটার`);
+        }
+      }
+    }
+  }, [activePandal, distanceToTarget, isNavigating, lang, speakPrompt]);
+
   return {
     isNavigating,
     currentStopIndex,
     activePandal,
+    nextPandal: activePandal,
     currentManeuver,
+    direction: currentManeuver,
     userLocation,
     distanceToTarget,
+    distanceMeters: distanceToTarget,
+    etaMinutes,
     routeData,
     activeRouteLine,
     startTour,
