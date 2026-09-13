@@ -126,9 +126,14 @@ export function solveTsp(nodes, mode) {
   return optimizeRouteTSP(nodes);
 }
 
-export function filterTopN(pandals, n) {
-  if (!n) return pandals;
-  return [...pandals].sort((a, b) => (b.popularity || 0) - (a.popularity || 0)).slice(0, n);
+export function filterTopN(pandals, n, userLocation) {
+  let sorted = [...pandals];
+  if (userLocation) {
+    sorted.sort((a, b) => haversineDistance(userLocation, a) - haversineDistance(userLocation, b));
+  } else {
+    sorted.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+  }
+  return n ? sorted.slice(0, n) : sorted;
 }
 
 export function solveBudget(startNode, pandals, budgetMin, mode) {

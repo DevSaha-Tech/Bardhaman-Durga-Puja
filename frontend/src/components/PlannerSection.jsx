@@ -13,8 +13,6 @@ import {
 } from '../utils/tspSolver';
 import { generateGoogleMapsUrl } from '../utils/navigationUrl';
 
-const CITY_CENTER = { lat: 23.2324, lng: 87.8615 };
-
 function formatDurationBn(totalMinutes) {
   const rounded = Math.round(totalMinutes);
   const hours = Math.floor(rounded / 60);
@@ -157,35 +155,24 @@ export default function PlannerSection() {
   }, [updateRouteState]);
 
   // Compute route based on selected mode
-  const { optimizedRoute, stats, trimMessage, isPreviewMode, isOutsideCity, distToCity } = useMemo(() => {
-    if (pandalsData.length === 0) return { optimizedRoute: [], stats: null, trimMessage: null, isPreviewMode: false, isOutsideCity: false, distToCity: 0 };
+  const { optimizedRoute, stats, trimMessage, isPreviewMode } = useMemo(() => {
+    if (pandalsData.length === 0) return { optimizedRoute: [], stats: null, trimMessage: null, isPreviewMode: false };
 
     let isPreview = false;
-    let isOutside = false;
-    let distanceToCenter = 0;
     
     // Determine the base pandals to use for calculation based on tab
     let selectedForCalc = [];
     if (plannerTab === 'top') {
-      selectedForCalc = filterTopN(pandalsData, topN);
+      selectedForCalc = filterTopN(pandalsData, topN, startLocation);
     } else if (plannerTab === 'budget') {
       selectedForCalc = [...pandalsData].sort((a, b) => (a.popularity ?? 99) - (b.popularity ?? 99));
     } else if (plannerTab === 'manual') {
       selectedForCalc = manualPandals;
     }
 
-    if (selectedForCalc.length === 0) return { optimizedRoute: [], stats: null, trimMessage: null, isPreviewMode: false, isOutsideCity: false, distToCity: 0 };
+    if (selectedForCalc.length === 0) return { optimizedRoute: [], stats: null, trimMessage: null, isPreviewMode: false };
 
     let origin = startLocation;
-    
-    if (origin) {
-      distanceToCenter = haversineDistance(origin, CITY_CENTER);
-      if (distanceToCenter > 15) {
-        isOutside = true;
-        isPreview = true;
-        origin = { lat: selectedForCalc[0].lat, lng: selectedForCalc[0].lng };
-      }
-    }
 
     if (!origin) {
       origin = { lat: selectedForCalc[0].lat, lng: selectedForCalc[0].lng };
@@ -195,21 +182,21 @@ export default function PlannerSection() {
     const END_NODE = { id: 'END', name: 'Return to Start', name_bn: 'শুরুর স্থান', name_en: 'Return to Start', zone: 'Destination', lat: origin.lat, lng: origin.lng };
 
     const buildRoute = (pandals) => {
-      if (pandals.length === 0) return { optimizedRoute: [], stats: null, trimMessage: null, isPreviewMode: isPreview, isOutsideCity: isOutside, distToCity: distanceToCenter };
+      if (pandals.length === 0) return { optimizedRoute: [], stats: null, trimMessage: null, isPreviewMode: isPreview };
       const nodes = isPreview ? [...pandals] : [{ id: '__START__', ...origin }, ...pandals];
       const solved = solveTsp(nodes, transportMode).filter(p => p.id !== '__START__');
       const itin = calcItinerary(origin, solved, transportMode);
-      return { optimizedRoute: [...solved, END_NODE], stats: itin, trimMessage: null, isPreviewMode: isPreview, isOutsideCity: isOutside, distToCity: distanceToCenter };
+      return { optimizedRoute: [...solved, END_NODE], stats: itin, trimMessage: null, isPreviewMode: isPreview };
     };
 
     if (plannerTab === 'budget' && budgetMin) {
       const { selected, stats: itin, trimmedCount } = solveBudget(origin, pandalsData, budgetMin, transportMode);
       const bLabel = BUDGET_OPTIONS.find(b => b.minutes === budgetMin);
       const trimMsg = trimmedCount > 0 ? `আপনার ${bLabel?.label ?? ''} বাজেটে সেরা ${selected.length}টি মণ্ডপ নির্বাচিত` : null;
-      return { optimizedRoute: selected.length > 0 ? [...selected, END_NODE] : [], stats: itin, trimMessage: trimMsg, isPreviewMode: isPreview, isOutsideCity: isOutside, distToCity: distanceToCenter };
+      return { optimizedRoute: selected.length > 0 ? [...selected, END_NODE] : [], stats: itin, trimMessage: trimMsg, isPreviewMode: isPreview };
     }
 
-    if (plannerTab === 'trends') return { optimizedRoute: [], stats: null, trimMessage: null, isPreviewMode: false, isOutsideCity: false, distToCity: 0 };
+    if (plannerTab === 'trends') return { optimizedRoute: [], stats: null, trimMessage: null, isPreviewMode: false };
 
     return buildRoute(selectedForCalc);
   }, [pandalsData, plannerTab, topN, budgetMin, transportMode, manualPandals, startLocation]);
@@ -252,7 +239,6 @@ export default function PlannerSection() {
           selectedRoute={optimizedRoute}
           onAddPandal={handleAddPandal}
           onRemovePandal={handleRemovePandal}
-          isOutsideCity={isOutsideCity}
           isRouteMode={plannerTab === 'manual'}
           isNavigating={liveNavState.isNavigating}
           userLocation={liveNavState.userLocation || startLocation}
@@ -399,18 +385,10 @@ export default function PlannerSection() {
             )}
 
             {/* GPS Denied Banner */}
-            {liveNavState.gpsPermissionDenied && !isOutsideCity && (
+            {liveNavState.gpsPermissionDenied && (
               <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 text-xs text-red-800 font-medium">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
                 সঠিক লাইভ নেভিগেশনের জন্য জিপিএস অন করুন। বর্তমানে আপনি মণ্ডপ পরিক্রমার প্রিভিউ দেখছেন।
-              </div>
-            )}
-            
-            {/* Out of Town Banner */}
-            {isOutsideCity && (
-              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-xs text-amber-800 font-medium">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
-                📍 আপনি বর্ধমান শহরের বাইরে আছেন (~{Math.round(distToCity)} কিমি)। এটি বর্ধমান শহরের ভেতরের পরিক্রমা প্রিভিউ।
               </div>
             )}
 
@@ -506,72 +484,59 @@ export default function PlannerSection() {
             )}
 
             {/* Start Button */}
-            {optimizedRoute.length > 0 && (
-              (startLocation === null) ? (
-                <button
-                  onClick={() => {
-                    if (typeof navigator !== 'undefined' && navigator.geolocation) {
-                      navigator.geolocation.getCurrentPosition(
-                        (pos) => setStartLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-                        (err) => {
-                          console.warn('GPS prompt from button denied:', err);
-                          Swal.fire({
-                             icon: 'error',
-                             title: 'লোকেশন সার্ভিস বন্ধ',
-                             text: 'লাইভ নেভিগেশন ব্যবহার করতে অনুগ্রহ করে আপনার ফোনের জিপিএস / লোকেশন সার্ভিস অন করুন এবং ব্রাউজারে পারমিশন দিন।',
-                             confirmButtonColor: '#991b1b',
-                             confirmButtonText: 'ঠিক আছে'
-                          });
-                        },
-                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                      );
-                    } else {
-                      Swal.fire({
-                         icon: 'error',
-                         title: 'অসমর্থিত ডিভাইস',
-                         text: 'আপনার ডিভাইসে লোকেশন সার্ভিস সাপোর্ট করছে না।',
-                         confirmButtonColor: '#991b1b',
-                         confirmButtonText: 'ঠিক আছে'
-                      });
-                    }
-                  }}
-                  className="w-full py-4 bg-white text-gray-700 border-2 border-gray-300 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-50"
-                >
-                  <MapPin className="w-5 h-5 text-gray-600" />
-                  📍 জিপিএস অন করুন
-                </button>
-              ) : isOutsideCity ? (
-                <div className="flex flex-col gap-2">
-                  <button className="w-full py-3 bg-white text-amber-600 border-2 border-amber-500 rounded-2xl font-bold flex flex-col items-center justify-center gap-1 cursor-default">
-                    <span className="flex items-center gap-2"><Navigation className="w-4 h-4" /> পরিক্রমা প্রিভিউ (শহরের বাইরে আছেন)</span>
-                    <span className="text-[10px] font-normal opacity-80">লাইভ নেভিগেশন বর্ধমান শহরে পৌঁছালে স্বয়ংক্রিয়ভাবে সক্রিয় হবে।</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (typeof window !== 'undefined' && window.speechSynthesis) {
-                        window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
-                      }
-                      liveNavState.startTour();
-                    }}
-                    className="w-full py-3 bg-white text-amber-600 border border-amber-500 rounded-2xl font-bold flex items-center justify-center transition-all hover:bg-amber-50 text-sm"
-                  >
-                    ডেমো নেভিগেশন দেখুন (Demo)
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => {
-                    if (typeof window !== 'undefined' && window.speechSynthesis) {
-                      window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
-                    }
-                    liveNavState.startTour();
-                  }}
-                  className="w-full py-4 bg-gradient-to-r from-red-700 to-red-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <Play className="w-5 h-5 fill-white" />
-                  পরিক্রমা শুরু করুন — {optimizedRoute.length - 1} {lang === 'en' ? 'stops' : 'মণ্ডপ'}
-                </button>
-              )
+            {startLocation === null ? (
+              <button
+                onClick={() => {
+                  if (typeof navigator !== 'undefined' && navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => setStartLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                      (err) => {
+                        console.warn('GPS prompt from button denied:', err);
+                        Swal.fire({
+                           icon: 'error',
+                           title: 'লোকেশন সার্ভিস বন্ধ',
+                           text: 'লাইভ নেভিগেশন ব্যবহার করতে অনুগ্রহ করে আপনার ফোনের জিপিএস / লোকেশন সার্ভিস অন করুন এবং ব্রাউজারে পারমিশন দিন।',
+                           confirmButtonColor: '#991b1b',
+                           confirmButtonText: 'ঠিক আছে'
+                        });
+                      },
+                      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    );
+                  } else {
+                    Swal.fire({
+                       icon: 'error',
+                       title: 'অসমর্থিত ডিভাইস',
+                       text: 'আপনার ডিভাইসে লোকেশন সার্ভিস সাপোর্ট করছে না।',
+                       confirmButtonColor: '#991b1b',
+                       confirmButtonText: 'ঠিক আছে'
+                    });
+                  }
+                }}
+                className="w-full py-4 bg-white text-gray-700 border-2 border-gray-300 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-50"
+              >
+                <MapPin className="w-5 h-5 text-gray-600" />
+                📍 জিপিএস অন করুন
+              </button>
+            ) : optimizedRoute.length > 0 ? (
+              <button
+                onClick={() => {
+                  if (typeof window !== 'undefined' && window.speechSynthesis) {
+                    window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+                  }
+                  liveNavState.startTour();
+                }}
+                className="w-full py-4 bg-gradient-to-r from-red-700 to-red-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Play className="w-5 h-5 fill-white" />
+                পরিক্রমা শুরু করুন — {optimizedRoute.length - 1} {lang === 'en' ? 'stops' : 'মণ্ডপ'}
+              </button>
+            ) : (
+              <button
+                disabled
+                className="w-full py-4 bg-gray-100 text-gray-400 border-2 border-gray-200 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all cursor-not-allowed"
+              >
+                ম্যাপ থেকে মণ্ডপ নির্বাচন করুন
+              </button>
             )}
           </div>
         </div>

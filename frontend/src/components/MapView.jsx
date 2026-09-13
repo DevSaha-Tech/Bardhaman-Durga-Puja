@@ -52,7 +52,7 @@ const routeIcon = new L.Icon({
 });
 
 // Auto-Pan Component
-function AutoCenterMap({ position, isNavigating, userLocation, isOutsideCity, selectedRoute }) {
+function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute }) {
   const map = useMap();
   
   useEffect(() => {
@@ -61,11 +61,14 @@ function AutoCenterMap({ position, isNavigating, userLocation, isOutsideCity, se
         animate: true,
         duration: 0.5,
       });
-    } else if ((!userLocation || isOutsideCity) && selectedRoute && selectedRoute.length > 0) {
-      const bounds = L.latLngBounds(selectedRoute.map(p => [p.lat, p.lng]));
+    } else if (selectedRoute && selectedRoute.length > 0) {
+      const points = userLocation ? [userLocation, ...selectedRoute] : selectedRoute;
+      const bounds = L.latLngBounds(points.map(p => [p.lat || p[0], p.lng || p[1]]));
       map.fitBounds(bounds, { padding: [50, 50], animate: true, duration: 0.5 });
+    } else if (userLocation) {
+      map.setView([userLocation.lat, userLocation.lng], 16, { animate: true });
     }
-  }, [position, isNavigating, userLocation, isOutsideCity, selectedRoute, map]);
+  }, [position, isNavigating, userLocation, selectedRoute, map]);
 
   return null;
 }
@@ -111,7 +114,6 @@ export default function MapView({
   isRouteMode,
   isNavigating = false,
   userLocation = null,
-  isOutsideCity = false,
   routeData = null,
   activeRouteLine = null,
   activePandal = null,
@@ -123,14 +125,11 @@ export default function MapView({
   const [haversinePolyline, setHaversinePolyline] = useState(null);
   
   const liveCenter = [23.6183691, 88.1185789];
-  const mapCenter = (userLocation && !isOutsideCity) ? [userLocation.lat, userLocation.lng] : (selectedRoute.length > 0 ? [selectedRoute[0].lat, selectedRoute[0].lng] : liveCenter);
+  const mapCenter = userLocation ? [userLocation.lat, userLocation.lng] : (selectedRoute.length > 0 ? [selectedRoute[0].lat, selectedRoute[0].lng] : liveCenter);
 
   let userCoordsForPolyline = [];
   if (userLocation && selectedRoute.length > 0) {
-    const dist = haversineDistance(userLocation, selectedRoute[0]);
-    if (dist <= 10) {
-      userCoordsForPolyline = [[userLocation.lat, userLocation.lng]];
-    }
+    userCoordsForPolyline = [[userLocation.lat, userLocation.lng]];
   }
 
   const planningPolyline = [
@@ -215,7 +214,6 @@ export default function MapView({
           position={isNavigating && userLocation ? [userLocation.lat, userLocation.lng] : null} 
           isNavigating={isNavigating} 
           userLocation={userLocation}
-          isOutsideCity={isOutsideCity}
           selectedRoute={selectedRoute} 
         />
         <LocateMeButton userLocation={userLocation} />
