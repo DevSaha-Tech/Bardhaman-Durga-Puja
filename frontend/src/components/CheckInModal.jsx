@@ -41,7 +41,7 @@ export default function CheckInModal({ pandal, onDismiss }) {
       <div className="absolute inset-0 z-[1000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
         <div className="bg-white rounded-3xl p-6 flex flex-col items-center gap-3 animate-bounce shadow-2xl">
           <CheckCircle className="w-12 h-12 text-green-500" />
-          <h3 className="text-xl font-bold text-gray-900">{t('checked_in') || 'চেক-ইন সফল!'}</h3>
+          <h3 className="text-xl font-bold text-gray-900">{lang === 'en' ? '✓ Check-in successful!' : '✓ মণ্ডপ দর্শন সফল হয়েছে!'}</h3>
         </div>
       </div>
     );

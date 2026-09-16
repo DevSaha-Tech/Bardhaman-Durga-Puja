@@ -19,6 +19,12 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
   const [osrmError, setOsrmError] = useState(false);
   const [gpsPermissionDenied, setGpsPermissionDenied] = useState(false);
 
+  // New states for step advancement
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [currentStepInitialDist, setCurrentStepInitialDist] = useState(0);
+  const [liveRemainingMeters, setLiveRemainingMeters] = useState(0);
+  const lastSpokenStepIndexRef = useRef(-1);
+
   const { speak: speakPrompt, isVoiceMuted, setIsVoiceMuted, isSpeaking } = useVoice({ lang });
 
   const wakeLockRef = useRef(null);
@@ -93,6 +99,8 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
     setIsNavigating(true);
     setCurrentStopIndex(0);
     setOsrmError(false);
+    setCurrentStepIndex(0);
+    lastSpokenStepIndexRef.current = -1;
     requestWakeLock();
 
     // Silent utterance to unlock iOS/browser speech restrictions
@@ -114,6 +122,13 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
     speakPrompt(t('tour_complete'));
   };
 
+  const sanitizeName = (p) => {
+    let name = (p?.name && p.name.trim()) || (p?.name_en && p.name_en.trim()) || 'মণ্ডপ';
+    if (/\d/.test(name)) name = name.replace(/\s*[\d.]+/g, '').trim();
+    if (/^[A-Z]\d/i.test(name)) name = 'মণ্ডপ';
+    return name;
+  };
+
   const getPandalName = (pandal) => {
     if (!pandal) return '';
     return lang === 'en' ? pandal.name_en || pandal.name : pandal.name_bn || pandal.name;
@@ -122,7 +137,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
   const skipToNext = () => {
     if (currentStopIndex < optimizedRoute.length - 1) {
       setCurrentStopIndex(prev => prev + 1);
-      const nextPandalName = getPandalName(optimizedRoute[currentStopIndex + 1]);
+      const nextPandalName = sanitizeName(optimizedRoute[currentStopIndex + 1]);
       speakPrompt(`${t('skip')} ${nextPandalName}`);
     } else {
       endTour();
@@ -186,13 +201,61 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
             routeDataRef.current = route;
             setOsrmError(false);
             if (route.legs && route.legs[0].steps.length > 0) {
+              setCurrentStepIndex(0);
               const step = route.legs[0].steps[0];
+              setCurrentStepInitialDist(step.distance || 0);
               const parsed = parseManeuver(step, t);
               setCurrentManeuver(parsed);
+              setLiveRemainingMeters(Math.round(step.distance || 0));
+              lastSpokenStepIndexRef.current = -1;
             }
           } else {
             setOsrmError(true);
             lastOsrmFailTimeRef.current = Date.now();
+          }
+        }
+      }
+
+      if (currentRouteData && currentRouteData.legs && currentRouteData.legs[0].steps.length > 0) {
+        const steps = currentRouteData.legs[0].steps;
+        const step = steps[currentStepIndex];
+        if (step) {
+          let endLng, endLat;
+          if (step.maneuver && step.maneuver.location) {
+            [endLng, endLat] = step.maneuver.location;
+          } else if (step.geometry && step.geometry.coordinates) {
+            const coords = step.geometry.coordinates;
+            [endLng, endLat] = coords[coords.length - 1];
+          }
+
+          if (endLng !== undefined && endLat !== undefined) {
+            const stepEndLocation = turf.point([endLng, endLat]);
+            const distToStepEndMeters = Math.round(turf.distance(rawUserPoint, stepEndLocation) * 1000);
+
+            if (distToStepEndMeters < 25 && currentStepIndex < steps.length - 1) {
+              const nextIdx = currentStepIndex + 1;
+              setCurrentStepIndex(nextIdx);
+              const nextStep = steps[nextIdx];
+              setCurrentStepInitialDist(nextStep.distance || 0);
+              const parsed = parseManeuver(nextStep, t);
+              setCurrentManeuver(parsed);
+              setLiveRemainingMeters(Math.round(nextStep.distance || 0));
+
+              if (lastSpokenStepIndexRef.current !== nextIdx && parsed) {
+                lastSpokenStepIndexRef.current = nextIdx;
+                const turnDist = Math.round(nextStep.distance || 0);
+                const toBn = (n) => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+                const spokenDist = lang === 'bn' ? toBn(turnDist) : turnDist;
+                
+                if (lang === 'bn') {
+                  speakPrompt(`${spokenDist} মিটার পর ${parsed.text}`);
+                } else {
+                  speakPrompt(`In ${spokenDist} meters, ${parsed.text}`);
+                }
+              }
+            } else {
+              setLiveRemainingMeters(distToStepEndMeters);
+            }
           }
         }
       }
@@ -249,7 +312,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
     if (activePandal && distanceToTarget !== null && isNavigating) {
       if (announcedPandalRef.current !== activePandal.id) {
         announcedPandalRef.current = activePandal.id;
-        const name = lang === 'en' ? activePandal.name_en || activePandal.name : activePandal.name_bn || activePandal.name;
+        const name = sanitizeName(activePandal);
         if (lang === 'en') {
           speakPrompt(`Next pandal ${name}, ${distanceToTarget} meters ahead`);
         } else {
@@ -269,6 +332,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
     userLocation,
     distanceToTarget,
     distanceMeters: distanceToTarget,
+    liveRemainingMeters,
     etaMinutes,
     routeData,
     activeRouteLine,

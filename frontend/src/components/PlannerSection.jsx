@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
@@ -221,7 +221,7 @@ export default function PlannerSection() {
     return (
     <section className="relative h-full w-full bg-stone-100 overflow-hidden">
       {(gpsPermission === 'denied' || (gpsError && gpsError.includes('denied'))) && (
-        <div className="absolute top-0 left-0 right-0 z-[60] bg-red-600 text-white px-4 py-3 text-center text-sm shadow-md font-medium">
+        <div className="absolute top-0 left-0 right-0 z-[60] bg-red-600 text-white px-4 py-3 text-center text-sm shadow-md font-medium pt-6">
           Location access denied. Enable it in your browser to plan a route from your position.
         </div>
       )}

@@ -1,4 +1,4 @@
-﻿import { APP_CONFIG } from '../config/appConfig';
+import { APP_CONFIG } from '../config/appConfig';
 import * as turf from '@turf/turf';
 
 const OSRM_BASE_URL = 'https://router.project-osrm.org';
@@ -38,19 +38,13 @@ export async function fetchOSRMRoute(startLng, startLat, endLng, endLat, mode = 
     console.warn("OSRM routing failed, falling back to straight-line", err);
   }
 
-  // Fallback to straight line (Haversine)
-  const distKm = getDistanceFallback({lng: startLng, lat: startLat}, {lng: endLng, lat: endLat});
-  const speed = APP_CONFIG.speeds[mode] || APP_CONFIG.speeds.walking;
-  const durationMin = (distKm / speed) * 60;
-  
+  // Do not return fake straight-line geometry for navigation.
   return {
     distanceKm: distKm,
     durationMin: durationMin,
-    geometry: {
-      type: "LineString",
-      coordinates: [[startLng, startLat], [endLng, endLat]]
-    },
-    steps: []
+    geometry: null,
+    steps: [],
+    error: 'unavailable'
   };
 }
 

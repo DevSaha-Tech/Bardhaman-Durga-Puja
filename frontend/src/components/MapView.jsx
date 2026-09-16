@@ -254,9 +254,7 @@ export default function MapView({
   }, [userLocation]);
 
   // Determine which polyline to show during navigation
-  const navigationPolyline = osrmError && haversinePolyline 
-    ? haversinePolyline 
-    : (osrmPolyline.length > 0 ? osrmPolyline : (activePandal ? [mapCenter, [activePandal.lat, activePandal.lng]] : []));
+  const navigationPolyline = osrmPolyline.length > 0 ? osrmPolyline : [];
 
   return (
     <>
@@ -314,19 +312,9 @@ export default function MapView({
               />
             )}
             
-            {/* Haversine Fallback (dashed red line) */}
+            {/* Haversine Fallback removed per instructions */}
             {(osrmError || osrmPolyline.length === 0) && haversinePolyline && (
-              <Polyline 
-                positions={haversinePolyline} 
-                pathOptions={{ 
-                  color: '#dc2626', 
-                  weight: 5, 
-                  opacity: 0.8, 
-                  dashArray: '10, 10',
-                  lineCap: 'round',
-                  lineJoin: 'round'
-                }} 
-              />
+              <></>
             )}
             
             {/* Fallback indicator */}

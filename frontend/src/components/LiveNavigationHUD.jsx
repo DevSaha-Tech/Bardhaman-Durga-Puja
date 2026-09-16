@@ -22,6 +22,7 @@ export default function LiveNavigationHUD({ navState, totalStops }) {
     currentManeuver, 
     distanceToTarget, 
     distanceMeters,
+    liveRemainingMeters,
     etaMinutes,
     currentStopIndex, 
     isVoiceMuted, 
@@ -73,7 +74,7 @@ export default function LiveNavigationHUD({ navState, totalStops }) {
             </div>
             <div className="flex flex-col">
               <span className="text-gray-400 font-bold text-xs">
-                {currentManeuver?.distance ? `${currentManeuver.distance} ${t('meters_after')}` : ''}
+                {currentManeuver && liveRemainingMeters > 0 ? `${lang === 'bn' ? String(liveRemainingMeters).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]) : liveRemainingMeters} ${t('meters_after')}` : ''}
               </span>
               <span className="text-white font-bold text-lg leading-tight">
                 {currentManeuver?.text || t('straight')}

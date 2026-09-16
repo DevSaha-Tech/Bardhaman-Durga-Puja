@@ -188,8 +188,6 @@ export function parseManeuver(step, t) {
 
   const modifier = step.maneuver.modifier;
   const type     = step.maneuver.type;
-  const distance = Math.round(step.distance || 0);
-  const distText = distance > 0 ? `${distance} ${t('meters_after')} ` : '';
 
   if (type === 'arrive') return { text: t('arrive', { name: '' }), icon: 'MapPin' };
 
@@ -197,13 +195,13 @@ export function parseManeuver(step, t) {
     case 'left':
     case 'sharp left':
     case 'slight left':
-      return { text: `${distText}${t('turn_left')}`,  icon: 'CornerUpLeft'  };
+      return { text: t('turn_left'),  icon: 'CornerUpLeft'  };
     case 'right':
     case 'sharp right':
     case 'slight right':
-      return { text: `${distText}${t('turn_right')}`, icon: 'CornerUpRight' };
+      return { text: t('turn_right'), icon: 'CornerUpRight' };
     case 'straight':
-      return { text: `${distance > 0 ? distance + ' ' + t('meters_after') + ' ' : ''}${t('straight')}`, icon: 'ArrowUp' };
+      return { text: t('straight'), icon: 'ArrowUp' };
     case 'uturn':
       return { text: t('uturn'), icon: 'CornerDownLeft' };
     default:
