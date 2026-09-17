@@ -70,9 +70,9 @@ function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute }) 
   }, [map]);
 
   useEffect(() => {
-    if (isNavigating && position) {
-      if (isUserPanning) return; // Guard for fix 1
+    if (isUserPanning) return; // Guard for fix 1
 
+    if (isNavigating && position) {
       const zoom = map.getZoom() > 16 ? map.getZoom() : 18;
       
       // Calculate drawer height

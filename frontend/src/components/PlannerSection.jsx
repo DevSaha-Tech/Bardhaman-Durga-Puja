@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import {
   MapPin, Play, Navigation, X, AlertCircle,
   Footprints, Bike, Car, Trophy, Star, Timer, Infinity as InfinityIcon,
-  Clock, Eye, Ruler, Flag, ChevronRight, Zap, Moon, Flame
+  Clock, Eye, Ruler, Flag, ChevronRight, Zap, Moon, Flame, ChevronDown, ChevronUp
 } from 'lucide-react';
 import {
   solveTsp, filterTopN, solveBudget, calcItinerary,
@@ -76,8 +76,9 @@ export default function PlannerSection() {
   const [pandalsData, setPandalsData] = useState([]);
   const [isMounted, setIsMounted] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(true);
+  const [isDrawerExpanded, setIsDrawerExpanded] = useState(false);
   const [touchStartY, setTouchStartY] = useState(null);
-  const { position: startLocation, error: gpsError, permission: gpsPermission } = useGeolocation({ mode: 'once' });
+  const { position: startLocation, error: gpsError, permission: gpsPermission, retry: retryGPS } = useGeolocation({ mode: 'once' });
 
   const handleTouchStart = (e) => setTouchStartY(e.touches[0].clientY);
   const handleTouchEnd = (e) => {
@@ -260,7 +261,11 @@ export default function PlannerSection() {
       {!liveNavState.isNavigating && (
         <div 
           className={`absolute bottom-0 left-0 right-0 md:relative md:w-[420px] bg-white/97 backdrop-blur-2xl shadow-[0_-12px_48px_rgba(0,0,0,0.12)] z-10 flex flex-col rounded-t-[2rem] md:rounded-none transition-transform duration-300 ease-in-out ${
-            isDrawerOpen ? 'translate-y-0 h-[68vh] md:h-full' : 'translate-y-full h-[68vh]'
+            isDrawerOpen
+              ? (isDrawerExpanded
+                  ? 'translate-y-0 h-[85vh] md:h-full'
+                  : 'translate-y-0 h-[45vh] md:h-full')
+              : 'translate-y-full h-[45vh]'
           }`}
         >
 
@@ -273,6 +278,14 @@ export default function PlannerSection() {
           >
             <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
           </div>
+
+          <button
+            onClick={() => setIsDrawerExpanded(v => !v)}
+            className="absolute top-3 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 md:hidden"
+            aria-label="Expand drawer"
+          >
+            {isDrawerExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
+          </button>
 
           <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-6 pt-2 space-y-4">
 
@@ -481,22 +494,7 @@ export default function PlannerSection() {
             {startLocation === null ? (
               <button
                 onClick={() => {
-                  if (typeof navigator !== 'undefined' && navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                      (pos) => window.location.reload(),
-                      (err) => {
-                        console.warn('GPS prompt from button denied:', err);
-                        Swal.fire({
-                           icon: 'error',
-                           title: 'লোকেশন সার্ভিস বন্ধ',
-                           text: 'লাইভ নেভিগেশন ব্যবহার করতে অনুগ্রহ করে আপনার ফোনের জিপিএস / লোকেশন সার্ভিস অন করুন এবং ব্রাউজারে পারমিশন দিন।',
-                           confirmButtonColor: '#991b1b',
-                           confirmButtonText: 'ঠিক আছে'
-                        });
-                      },
-                      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                    );
-                  } else {
+                  if (typeof navigator === 'undefined' || !navigator.geolocation) {
                     Swal.fire({
                        icon: 'error',
                        title: 'অসমর্থিত ডিভাইস',
@@ -504,7 +502,9 @@ export default function PlannerSection() {
                        confirmButtonColor: '#991b1b',
                        confirmButtonText: 'ঠিক আছে'
                     });
+                    return;
                   }
+                  retryGPS();
                 }}
                 className="w-full py-4 bg-white text-gray-700 border-2 border-gray-300 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-50"
               >
