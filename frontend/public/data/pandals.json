@@ -728,5 +728,389 @@
       "checkInRadius": 150
     },
     "tags": []
+  },
+  {
+    "id": "test_A2_1",
+    "name": "টেস্ট মণ্ডপ A2-1",
+    "name_en": "Test Pandal A2-1",
+    "city": "",
+    "zone": "",
+    "lat": 22.581518,
+    "lng": 88.4392848,
+    "rank": 40,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "test_A2_2",
+    "name": "টেস্ট মণ্ডপ A2-2",
+    "name_en": "Test Pandal A2-2",
+    "city": "",
+    "zone": "",
+    "lat": 22.5819694,
+    "lng": 88.4384249,
+    "rank": 41,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "test_A2_3",
+    "name": "টেস্ট মণ্ডপ A2-3",
+    "name_en": "Test Pandal A2-3",
+    "city": "",
+    "zone": "",
+    "lat": 22.5821057,
+    "lng": 88.4372995,
+    "rank": 42,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "test_A2_4",
+    "name": "টেস্ট মণ্ডপ A2-4",
+    "name_en": "Test Pandal A2-4",
+    "city": "",
+    "zone": "",
+    "lat": 22.581518,
+    "lng": 88.4366255,
+    "rank": 43,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "test_A2_5",
+    "name": "টেস্ট মণ্ডপ A2-5",
+    "name_en": "Test Pandal A2-5",
+    "city": "",
+    "zone": "",
+    "lat": 22.5809664,
+    "lng": 88.4373386,
+    "rank": 44,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "test_A2_6",
+    "name": "টেস্ট মণ্ডপ A2-6",
+    "name_en": "Test Pandal A2-6",
+    "city": "",
+    "zone": "",
+    "lat": 22.5808129,
+    "lng": 88.4386996,
+    "rank": 45,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "test_B2_1",
+    "name": "টেস্ট মণ্ডপ B2-1",
+    "name_en": "Test Pandal B2-1",
+    "city": "",
+    "zone": "",
+    "lat": 23.6183691,
+    "lng": 88.1195517,
+    "rank": 46,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "test_B2_2",
+    "name": "টেস্ট মণ্ডপ B2-2",
+    "name_en": "Test Pandal B2-2",
+    "city": "",
+    "zone": "",
+    "lat": 23.6192528,
+    "lng": 88.1195434,
+    "rank": 47,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "test_B2_3",
+    "name": "টেস্ট মণ্ডপ B2-3",
+    "name_en": "Test Pandal B2-3",
+    "city": "",
+    "zone": "",
+    "lat": 23.6187965,
+    "lng": 88.1181124,
+    "rank": 48,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "test_B2_4",
+    "name": "টেস্ট মণ্ডপ B2-4",
+    "name_en": "Test Pandal B2-4",
+    "city": "",
+    "zone": "",
+    "lat": 23.6183691,
+    "lng": 88.1177606,
+    "rank": 49,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "test_B2_5",
+    "name": "টেস্ট মণ্ডপ B2-5",
+    "name_en": "Test Pandal B2-5",
+    "city": "",
+    "zone": "",
+    "lat": 23.6176085,
+    "lng": 88.1177488,
+    "rank": 50,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "test_B2_6",
+    "name": "টেস্ট মণ্ডপ B2-6",
+    "name_en": "Test Pandal B2-6",
+    "city": "",
+    "zone": "",
+    "lat": 23.6179868,
+    "lng": 88.1189961,
+    "rank": 51,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "test_C2_1",
+    "name": "টেস্ট মণ্ডপ C2-1",
+    "name_en": "Test Pandal C2-1",
+    "city": "",
+    "zone": "",
+    "lat": 26.517396,
+    "lng": 89.2085056,
+    "rank": 52,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "test_C2_2",
+    "name": "টেস্ট মণ্ডপ C2-2",
+    "name_en": "Test Pandal C2-2",
+    "city": "",
+    "zone": "",
+    "lat": 26.5177591,
+    "lng": 89.2080108,
+    "rank": 53,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "test_C2_3",
+    "name": "টেস্ট মণ্ডপ C2-3",
+    "name_en": "Test Pandal C2-3",
+    "city": "",
+    "zone": "",
+    "lat": 26.5181919,
+    "lng": 89.2067156,
+    "rank": 54,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "test_C2_4",
+    "name": "টেস্ট মণ্ডপ C2-4",
+    "name_en": "Test Pandal C2-4",
+    "city": "",
+    "zone": "",
+    "lat": 26.517396,
+    "lng": 89.2064442,
+    "rank": 55,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "test_C2_5",
+    "name": "টেস্ট মণ্ডপ C2-5",
+    "name_en": "Test Pandal C2-5",
+    "city": "",
+    "zone": "",
+    "lat": 26.5164877,
+    "lng": 89.20659,
+    "rank": 56,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "test_C2_6",
+    "name": "টেস্ট মণ্ডপ C2-6",
+    "name_en": "Test Pandal C2-6",
+    "city": "",
+    "zone": "",
+    "lat": 26.5170364,
+    "lng": 89.2080069,
+    "rank": 57,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "katwa_1",
+    "name": "কাটোয়া প্যান্ডেল 1",
+    "name_en": "Katwa Pandal 1",
+    "city": "Katwa",
+    "zone": "",
+    "lat": 23.640992,
+    "lng": 88.132435,
+    "rank": 58,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "katwa_2",
+    "name": "কাটোয়া প্যান্ডেল 2",
+    "name_en": "Katwa Pandal 2",
+    "city": "Katwa",
+    "zone": "",
+    "lat": 23.641227,
+    "lng": 88.132136,
+    "rank": 59,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "katwa_3",
+    "name": "কাটোয়া প্যান্ডেল 3",
+    "name_en": "Katwa Pandal 3",
+    "city": "Katwa",
+    "zone": "",
+    "lat": 23.640684,
+    "lng": 88.130792,
+    "rank": 60,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "katwa_4",
+    "name": "কাটোয়া প্যান্ডেল 4",
+    "name_en": "Katwa Pandal 4",
+    "city": "Katwa",
+    "zone": "",
+    "lat": 23.641902,
+    "lng": 88.13253,
+    "rank": 61,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "katwa_5",
+    "name": "কাটোয়া প্যান্ডেল 5",
+    "name_en": "Katwa Pandal 5",
+    "city": "Katwa",
+    "zone": "",
+    "lat": 23.641372,
+    "lng": 88.133447,
+    "rank": 62,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "katwa_6",
+    "name": "কাটোয়া প্যান্ডেল 6",
+    "name_en": "Katwa Pandal 6",
+    "city": "Katwa",
+    "zone": "",
+    "lat": 23.639836,
+    "lng": 88.132039,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
   }
 ]
