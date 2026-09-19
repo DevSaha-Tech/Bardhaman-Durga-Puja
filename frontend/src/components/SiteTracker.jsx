@@ -4,45 +4,58 @@ import { useEffect, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { Users } from 'lucide-react';
 
+function getCookie(name) {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  if (match) return match[2];
+  return null;
+}
+
+function setCookie(name, value, days) {
+  if (typeof document === 'undefined') return;
+  const d = new Date();
+  d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+  let expires = "expires=" + d.toUTCString();
+  document.cookie = name + "=" + value + ";" + expires + ";path=/;SameSite=Lax;Secure";
+}
+
 export default function SiteTracker() {
   const [visitorCount, setVisitorCount] = useState(null);
 
   useEffect(() => {
     const trackVisitor = async () => {
-      let visitorId = localStorage.getItem('puja_visitor_id');
-      let lastVisit = localStorage.getItem('puja_last_visit');
-      const now = Date.now();
-      const TWELVE_HOURS = 12 * 60 * 60 * 1000;
+      if (!isSupabaseConfigured) return;
 
-      // If no ID or 12 hours have passed, generate new session and count
-      if (!visitorId || !lastVisit || (now - parseInt(lastVisit) > TWELVE_HOURS)) {
-        visitorId = crypto.randomUUID();
-        localStorage.setItem('puja_visitor_id', visitorId);
-        localStorage.setItem('puja_last_visit', now.toString());
-        
-        if (isSupabaseConfigured) {
-          try {
-            // Using insert because generating a new UUID acts as a new unique session
-            await supabase.from('site_views').insert([{ user_uuid: visitorId }]);
-          } catch (e) {
-            console.error('Failed to log site view', e);
+      const visitedCookie = getCookie('puja_visited');
+
+      if (!visitedCookie) {
+        try {
+          const { error } = await supabase.rpc('increment_visits');
+          if (!error) {
+            setCookie('puja_visited', '1', 1);
+          } else {
+            console.warn('Failed to increment visits:', error);
           }
+        } catch (e) {
+          console.warn('Failed to call increment RPC:', e);
         }
       }
 
-      // Fetch total visitor count
-      if (isSupabaseConfigured) {
-        try {
-          const { count, error } = await supabase
-            .from('site_views')
-            .select('*', { count: 'exact', head: true });
-            
-          if (!error && count !== null) {
-            setVisitorCount(count);
-          }
-        } catch (e) {
-          console.error('Failed to fetch count', e);
+      // Fetch current total
+      try {
+        const { data, error } = await supabase
+          .from('site_stats')
+          .select('total_visits')
+          .eq('id', 1)
+          .single();
+
+        if (!error && data) {
+          setVisitorCount(data.total_visits);
+        } else {
+          console.warn('Failed to fetch total_visits:', error);
         }
+      } catch (e) {
+        console.warn('Failed to fetch count:', e);
       }
     };
     

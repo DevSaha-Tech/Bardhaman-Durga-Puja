@@ -83,7 +83,24 @@ const translations = {
     foot_desc: "বর্ধমানের উৎসবপ্রেমী মানুষদের জন্য তৈরি একটি সম্পূর্ণ ফ্রি ও ওপেন সোর্স প্রজেক্ট। আসুন সবাই মিলে এক সুন্দর, সুশৃঙ্খল ও জ্যামমুক্ত পুজো উপভোগ করি।",
     foot_emergency: "জরুরি হেল্পলাইন",
     foot_police: "বর্ধমান পুলিশ কন্ট্রোল",
-    foot_hospital: "বর্ধমান মেডিকেল কলেজ হাসপাতাল"
+    foot_hospital: "বর্ধমান মেডিকেল কলেজ হাসপাতাল",
+    
+    // Feedback
+    feedback_button_aria: "মতামত জানান",
+    feedback_title: "আপনার মতামত জানান",
+    feedback_category_label: "বিভাগ",
+    feedback_category_general: "সাধারণ মতামত",
+    feedback_category_bug: "সমস্যা / বাগ",
+    feedback_category_suggestion: "পরিবর্তনের প্রস্তাব",
+    feedback_category_add_pandal: "নতুন মণ্ডপ যোগ করুন",
+    feedback_category_data: "তথ্য সংশোধন",
+    feedback_category_other: "অন্যান্য",
+    feedback_pandal_name_label: "মণ্ডপের নাম",
+    feedback_message_label: "আপনার মতামত",
+    feedback_submit: "পাঠান",
+    feedback_cancel: "বাতিল",
+    feedback_thanks: "ধন্যবাদ! আপনার মতামত আমরা পেয়েছি।",
+    feedback_error: "দুঃখিত, পাঠানো যায়নি। আবার চেষ্টা করুন।"
   },
   en: {
     // Navbar
@@ -165,7 +182,24 @@ const translations = {
     foot_desc: "A completely free and open-source project built for the festival-loving people of Bardhaman. Let's all enjoy a beautiful, organized, and traffic-free Puja.",
     foot_emergency: "Emergency Helpline",
     foot_police: "Bardhaman Police Control",
-    foot_hospital: "Bardhaman Medical College Hospital"
+    foot_hospital: "Bardhaman Medical College Hospital",
+    
+    // Feedback
+    feedback_button_aria: "Send feedback",
+    feedback_title: "Send Feedback",
+    feedback_category_label: "Category",
+    feedback_category_general: "General",
+    feedback_category_bug: "Bug / Problem",
+    feedback_category_suggestion: "Suggestion",
+    feedback_category_add_pandal: "Add a Pandal",
+    feedback_category_data: "Data Correction",
+    feedback_category_other: "Other",
+    feedback_pandal_name_label: "Pandal name",
+    feedback_message_label: "Your message",
+    feedback_submit: "Submit",
+    feedback_cancel: "Cancel",
+    feedback_thanks: "Thanks! We received your feedback.",
+    feedback_error: "Sorry, submission failed. Please try again."
   },
   bng: {
     // Navbar

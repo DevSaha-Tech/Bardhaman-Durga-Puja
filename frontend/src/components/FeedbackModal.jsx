@@ -1,0 +1,158 @@
+"use client";
+
+import { useState } from 'react';
+import { X, Loader2 } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
+import { supabase } from '@/lib/supabase';
+
+export default function FeedbackModal({ isOpen, onClose }) {
+  const { t } = useLanguage();
+  const [category, setCategory] = useState('general');
+  const [pandalName, setPandalName] = useState('');
+  const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [status, setStatus] = useState(null); // 'success' | 'error' | null
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!message.trim()) return;
+
+    setIsSubmitting(true);
+    setStatus(null);
+
+    const { error } = await supabase
+      .from('feedback')
+      .insert({
+        category,
+        message,
+        pandal_id: pandalName || null,
+      });
+
+    setIsSubmitting(false);
+
+    if (error) {
+      console.error(error);
+      setStatus('error');
+    } else {
+      setStatus('success');
+      setTimeout(() => {
+        onClose();
+        // Reset state
+        setCategory('general');
+        setPandalName('');
+        setMessage('');
+        setStatus(null);
+      }, 2000);
+    }
+  };
+
+  const categories = [
+    { id: 'general', label: t('feedback_category_general') },
+    { id: 'bug', label: t('feedback_category_bug') },
+    { id: 'suggestion', label: t('feedback_category_suggestion') },
+    { id: 'add_pandal', label: t('feedback_category_add_pandal') },
+    { id: 'data', label: t('feedback_category_data') },
+    { id: 'other', label: t('feedback_category_other') },
+  ];
+
+  const showPandalField = category === 'add_pandal' || category === 'data';
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white w-full h-auto max-h-[90vh] md:max-w-[480px] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+          <h2 className="text-xl font-bold text-gray-900">{t('feedback_title')}</h2>
+          <button 
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 overflow-y-auto">
+          {status === 'success' ? (
+            <div className="bg-green-50 text-green-700 p-4 rounded-xl text-center font-medium animate-in fade-in">
+              {t('feedback_thanks')}
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  {t('feedback_category_label')}
+                </label>
+                <select 
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                >
+                  {categories.map(c => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {showPandalField && (
+                <div className="animate-in fade-in slide-in-from-top-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    {t('feedback_pandal_name_label')}
+                  </label>
+                  <input 
+                    type="text"
+                    value={pandalName}
+                    onChange={(e) => setPandalName(e.target.value)}
+                    placeholder="যেমন: সর্বমঙ্গলা"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  {t('feedback_message_label')} <span className="text-red-500">*</span>
+                </label>
+                <textarea 
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="এখানে লিখুন..."
+                  rows={4}
+                  required
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all resize-none"
+                />
+              </div>
+
+              {status === 'error' && (
+                <div className="text-red-600 text-sm font-medium bg-red-50 px-3 py-2 rounded-lg">
+                  {t('feedback_error')}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
+                >
+                  {t('feedback_cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !message.trim()}
+                  className="flex-1 px-4 py-2.5 bg-red-800 text-white font-semibold rounded-xl hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {t('feedback_submit')}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
