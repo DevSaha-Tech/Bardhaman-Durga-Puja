@@ -445,6 +445,16 @@ export default function PlannerSection() {
               </div>
             )}
 
+            {/* Clear All Button for Manual Tab */}
+            {plannerTab === 'manual' && manualPandals.length > 0 && (
+              <button
+                onClick={() => setManualPandals([])}
+                className="w-full text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl py-2 mb-2 transition-colors"
+              >
+                {lang === 'en' ? 'Clear All' : 'সব মুছুন'}
+              </button>
+            )}
+
             {/* Timeline Itinerary */}
             {stats?.legs?.length > 0 && (
               <div className="space-y-0">

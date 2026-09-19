@@ -3,7 +3,7 @@
 import { APP_CONFIG } from '../config/appConfig';
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, Tooltip, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { MapPin, Navigation, Star, Zap, Users, CheckCircle, MessageSquarePlus, AlertTriangle } from 'lucide-react';
@@ -24,6 +24,16 @@ L.Icon.Default.mergeOptions({
 // Custom Red Icon for Planning Phase Location
 const planningUserIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+// Custom Orange Icon for Trending Pandals
+const trendingIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -52,6 +62,14 @@ const routeIcon = new L.Icon({
   popupAnchor: [1, -34],
   shadowSize: [41, 41]
 });
+
+// Zoom Tracker Component
+function ZoomTracker({ onZoom }) {
+  useMapEvents({
+    zoomend: (e) => onZoom(e.target.getZoom()),
+  });
+  return null;
+}
 
 // Auto-Pan Component
 function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute }) {
@@ -106,16 +124,17 @@ function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute }) 
   return isUserPanning && isNavigating ? (
     <div className="leaflet-bottom leaflet-right mb-72 mr-4 pointer-events-auto z-[1000]">
       <div className="leaflet-control leaflet-bar border-none shadow-xl rounded-full bg-white overflow-hidden">
-        <button 
+        <button
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             setIsUserPanning(false);
           }}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 pointer-events-auto"
+          className="w-12 h-12 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl pointer-events-auto"
+          aria-label="Re-centre"
           title="Re-centre"
         >
-          <Navigation className="w-4 h-4" /> Re-centre
+          <Navigation className="w-5 h-5" />
         </button>
       </div>
     </div>
@@ -195,16 +214,8 @@ export default function MapView({
   const { center: mapCenter, zoom: mapZoom } = getMapCenterAndZoom();
   const liveCenter = mapCenter; // fallback reference for haversine origin
 
-  let userCoordsForPolyline = [];
-  if (userLocation && selectedRoute.length > 0) {
-    userCoordsForPolyline = [[userLocation.lat, userLocation.lng]];
-  }
-
-  const planningPolyline = [
-    ...userCoordsForPolyline, 
-    ...selectedRoute.map(p => [p.lat, p.lng]), 
-    ...(selectedRoute.length > 0 ? userCoordsForPolyline : [])
-  ];
+  // State to track zoom level for marker tooltips
+  const [currentZoom, setCurrentZoom] = useState(mapZoom);
 
   const osrmPolyline = activeRouteLine 
     ? activeRouteLine.map(c => [c[1], c[0]])
@@ -281,6 +292,8 @@ export default function MapView({
           maxZoom={22}
         />
         
+        <ZoomTracker onZoom={setCurrentZoom} />
+
         <AutoCenterMap 
           position={stablePosition} 
           isNavigating={isNavigating} 
@@ -303,12 +316,6 @@ export default function MapView({
           </Marker>
         )}
 
-        {!isNavigating && selectedRoute.length > 0 && (
-          <Polyline 
-            positions={planningPolyline} 
-            pathOptions={{ color: '#2563eb', weight: 4, opacity: 0.6, dashArray: '8, 8' }} 
-          />
-        )}
 
         {isNavigating && activePandal && (
           <>
@@ -346,8 +353,23 @@ export default function MapView({
             <Marker 
               key={pandal.id} 
               position={[pandal.lat, pandal.lng]}
-              icon={isAdded ? routeIcon : new L.Icon.Default()}
+              icon={
+                isAdded ? routeIcon 
+                : pandal.trending === true ? trendingIcon 
+                : new L.Icon.Default()
+              }
             >
+              {currentZoom >= 15 && (
+                <Tooltip
+                  permanent
+                  direction="top"
+                  offset={[0, -34]}
+                  className="pandal-name-label"
+                  opacity={0.95}
+                >
+                  {lang === 'en' ? pandal.name_en || pandal.name : pandal.name_bn || pandal.name}
+                </Tooltip>
+              )}
               {!isNavigating && (
                 <Popup className="custom-popup" minWidth={250}>
                   <div className="flex flex-col gap-2">
