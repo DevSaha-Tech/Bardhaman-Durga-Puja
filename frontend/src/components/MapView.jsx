@@ -2,7 +2,7 @@
 
 import { APP_CONFIG } from '../config/appConfig';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -69,9 +69,6 @@ function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute }) 
     };
   }, [map]);
 
-  const userLat = userLocation?.lat;
-  const userLng = userLocation?.lng;
-
   useEffect(() => {
     if (isUserPanning) return; // Guard for fix 1
 
@@ -98,13 +95,13 @@ function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute }) 
         duration: 0.5,
       });
     } else if (selectedRoute && selectedRoute.length > 0) {
-      const points = userLat && userLng ? [{ lat: userLat, lng: userLng }, ...selectedRoute] : selectedRoute;
+      const points = userLocation ? [{ lat: userLocation.lat, lng: userLocation.lng }, ...selectedRoute] : selectedRoute;
       const bounds = L.latLngBounds(points.map(p => [p.lat || p[0], p.lng || p[1]]));
       map.fitBounds(bounds, { padding: [50, 50], animate: true, duration: 0.5 });
-    } else if (userLat && userLng) {
-      map.setView([userLat, userLng], 16, { animate: true });
+    } else if (userLocation) {
+      map.setView([userLocation?.lat, userLocation?.lng], 16, { animate: true });
     }
-  }, [position, isNavigating, userLat, userLng, selectedRoute, map, isUserPanning]);
+  }, [position, isNavigating, userLocation, selectedRoute, map, isUserPanning]);
 
   return isUserPanning && isNavigating ? (
     <div className="leaflet-bottom leaflet-right mb-72 mr-4 pointer-events-auto z-[1000]">
@@ -171,6 +168,9 @@ export default function MapView({
   activePandal = null,
   liveCounts = {}
 }) {
+  const userLat = userLocation?.lat;
+  const userLng = userLocation?.lng;
+
   const { lang, t } = useLanguage();
   const [reviewPandal, setReviewPandal] = useState(null);
   const [osrmError, setOsrmError] = useState(false);
@@ -257,7 +257,7 @@ export default function MapView({
   }, [userLocation]);
 
   // Determine which polyline to show during navigation
-  const stablePosition = React.useMemo(() => {
+  const stablePosition = useMemo(() => {
     if (isNavigating && userLat && userLng) {
       return [userLat, userLng];
     }
