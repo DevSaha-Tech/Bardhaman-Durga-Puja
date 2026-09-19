@@ -122,13 +122,13 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
     speakPrompt(t('tour_complete'));
   };
 
-  const getPandalName = React.useCallback((pandal) => {
+  const getPandalName = useCallback((pandal) => {
     if (!pandal) return 'মণ্ডপ';
     if (lang === 'en') return pandal.name_en || pandal.name || 'মণ্ডপ';
     return pandal.name_bn || pandal.name || pandal.name_en || 'মণ্ডপ';
   }, [lang]);
 
-  const sanitizeName = React.useCallback((p) => {
+  const sanitizeName = useCallback((p) => {
     let name = getPandalName(p);
     // Remove test prefix and pure digits, keep bengali words
     name = name.replace(/^Test\s*[\d.]+/i, '');
