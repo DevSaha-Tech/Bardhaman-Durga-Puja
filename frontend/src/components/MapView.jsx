@@ -55,7 +55,7 @@ const getLivePulseIcon = (heading = 0) => L.divIcon({
 });
 
 const routeIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -122,21 +122,19 @@ function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute }) 
   }, [position, isNavigating, userLocation, selectedRoute, map, isUserPanning]);
 
   return isUserPanning && isNavigating ? (
-    <div className="leaflet-bottom leaflet-right mb-72 mr-4 pointer-events-auto z-[1000]">
-      <div className="leaflet-control leaflet-bar border-none shadow-xl rounded-full bg-white overflow-hidden">
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setIsUserPanning(false);
-          }}
-          className="w-12 h-12 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl pointer-events-auto"
-          aria-label="Re-centre"
-          title="Re-centre"
-        >
-          <Navigation className="w-5 h-5" />
-        </button>
-      </div>
+    <div className="absolute right-4 bottom-32 z-[1000] pointer-events-auto">
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsUserPanning(false);
+        }}
+        className="w-12 h-12 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl pointer-events-auto"
+        aria-label="Re-centre"
+        title="Re-centre"
+      >
+        <Navigation className="w-5 h-5" />
+      </button>
     </div>
   ) : null;
 }
@@ -416,7 +414,7 @@ export default function MapView({
                             : 'bg-red-800 hover:bg-red-900 text-white shadow-sm'
                         }`}
                       >
-                        {isAdded ? (lang === 'en' ? '- Remove from Route' : '- তালিকা থেকে বাদ দিন') : (lang === 'en' ? '+ Add to Route' : '+ তালিকায় যোগ করুন')}
+                        {isAdded ? (lang === 'en' ? 'Remove from Route' : 'তালিকা থেকে বাদ দিন') : (lang === 'en' ? 'Add to Route' : 'তালিকায় যোগ করুন')}
                       </button>
                     </div>
                   </div>
