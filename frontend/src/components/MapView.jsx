@@ -72,9 +72,8 @@ function ZoomTracker({ onZoom }) {
 }
 
 // Auto-Pan Component
-function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute }) {
+function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute, isUserPanning, setIsUserPanning }) {
   const map = useMap();
-  const [isUserPanning, setIsUserPanning] = useState(false);
 
   useEffect(() => {
     const handlePanStart = () => setIsUserPanning(true);
@@ -85,7 +84,7 @@ function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute }) 
       map.off('dragstart', handlePanStart);
       map.off('zoomstart', handlePanStart);
     };
-  }, [map]);
+  }, [map, setIsUserPanning]);
 
   useEffect(() => {
     if (isUserPanning) return; // Guard for fix 1
@@ -121,22 +120,7 @@ function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute }) 
     }
   }, [position, isNavigating, userLocation, selectedRoute, map, isUserPanning]);
 
-  return isUserPanning && isNavigating ? (
-    <div className="absolute right-4 bottom-32 z-[1000] pointer-events-auto">
-      <button
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setIsUserPanning(false);
-        }}
-        className="w-12 h-12 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl pointer-events-auto"
-        aria-label="Re-centre"
-        title="Re-centre"
-      >
-        <Navigation className="w-5 h-5" />
-      </button>
-    </div>
-  ) : null;
+  return null;
 }
 
 // Locate Me Component
@@ -192,6 +176,7 @@ export default function MapView({
   const [reviewPandal, setReviewPandal] = useState(null);
   const [osrmError, setOsrmError] = useState(false);
   const [haversinePolyline, setHaversinePolyline] = useState(null);
+  const [isUserPanning, setIsUserPanning] = useState(false);
   
   const getMapCenterAndZoom = () => {
     if (userLocation) return { center: [userLocation.lat, userLocation.lng], zoom: 14 };
@@ -274,7 +259,7 @@ export default function MapView({
   }, [isNavigating, userLat, userLng]);
 
   return (
-    <>
+    <div className="relative w-full h-full">
       <MapContainer 
         center={mapCenter} 
         zoom={mapZoom} 
@@ -297,6 +282,8 @@ export default function MapView({
           isNavigating={isNavigating} 
           userLocation={userLocation}
           selectedRoute={selectedRoute} 
+          isUserPanning={isUserPanning}
+          setIsUserPanning={setIsUserPanning}
         />
         <LocateMeButton userLocation={userLocation} />
 
@@ -426,6 +413,17 @@ export default function MapView({
 
       </MapContainer>
 
+      {isUserPanning && isNavigating && (
+        <button
+          onClick={() => setIsUserPanning(false)}
+          className="absolute right-4 bottom-32 z-[1000] w-12 h-12 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl"
+          aria-label="Re-centre"
+          title="Re-centre"
+        >
+          <Navigation className="w-5 h-5" />
+        </button>
+      )}
+
       {reviewPandal && (
         <ReviewModal 
           pandalId={reviewPandal.id}
@@ -433,7 +431,7 @@ export default function MapView({
           onClose={() => setReviewPandal(null)} 
         />
       )}
-    </>
+    </div>
   );
 }
 
