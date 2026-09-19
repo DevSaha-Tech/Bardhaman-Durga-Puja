@@ -36,16 +36,22 @@ export default function LiveNavigationHUD({ navState, totalStops }) {
   const { lang, t } = useLanguage();
   const [modalDismissedFor, setModalDismissedFor] = useState(null);
 
-  if (!activePandal) return null;
+  const hasCheckedIn = activePandal ? safeStorage.get(`last_checkin_${activePandal.id}`) !== null : false;
+  const isArrived = activePandal && distanceToTarget !== null && distanceToTarget <= 50;
+  const showModal = isArrived && modalDismissedFor !== activePandal?.id && !hasCheckedIn;
 
-  const isArrived = distanceToTarget !== null && distanceToTarget <= 75;
-  
-  // Show modal if arrived, haven't dismissed it for this pandal, and haven't checked in recently
-  const hasCheckedIn = safeStorage.get(`last_checkin_${activePandal.id}`) !== null;
-  const showModal = isArrived && modalDismissedFor !== activePandal.id && !hasCheckedIn;
+  const arrivedVoiceRef = React.useRef(null);
 
-  // Resolve icon component
-  const ManeuverIcon = currentManeuver && IconMap[currentManeuver.icon] ? IconMap[currentManeuver.icon] : ArrowUp;
+  React.useEffect(() => {
+    if (activePandal && isArrived && arrivedVoiceRef.current !== activePandal.id) {
+      const getPandalName = (p) => lang === 'en' ? (p.name_en || p.name) : (p.name_bn || p.name);
+      arrivedVoiceRef.current = activePandal.id;
+      const text = lang === 'bn' 
+        ? `${getPandalName(activePandal)}-এ পৌঁছে গেছেন। এখন ঠাকুর উপভোগ করুন!`
+        : `You have arrived at ${getPandalName(activePandal)}. Enjoy the Puja!`;
+      if (navState.speakPrompt) navState.speakPrompt(text);
+    }
+  }, [isArrived, activePandal?.id, lang, navState, activePandal]);
 
   // Auto-mute when checked in to prevent spamming instructions while user is inside pandal
   React.useEffect(() => {
@@ -53,6 +59,11 @@ export default function LiveNavigationHUD({ navState, totalStops }) {
       setIsVoiceMuted(true);
     }
   }, [hasCheckedIn, isVoiceMuted, setIsVoiceMuted]);
+
+  if (!activePandal) return null;
+
+  // Resolve icon component
+  const ManeuverIcon = currentManeuver && IconMap[currentManeuver.icon] ? IconMap[currentManeuver.icon] : ArrowUp;
 
   return (
     <>
@@ -105,7 +116,7 @@ export default function LiveNavigationHUD({ navState, totalStops }) {
               </h2>
               {hasCheckedIn && (
                 <span className="inline-flex items-center gap-1 mt-1 text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full w-fit">
-                  <CheckCircle className="w-3 h-3" /> {lang === 'en' ? 'Check-in Complete' : 'দর্শন সম্পন্ন'}
+                  <CheckCircle className="w-3 h-3" /> {t('checkin_complete')}
                 </span>
               )}
               <span className="text-gray-500 text-sm flex items-center gap-1 mt-1">
@@ -143,7 +154,7 @@ export default function LiveNavigationHUD({ navState, totalStops }) {
                 }}
                 className="flex-[2] py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-green-900/20 transition-all hover:scale-[1.02]"
               >
-                {currentStopIndex === totalStops - 1 ? (lang === 'en' ? 'Tour Complete' : 'সফর শেষ') : (lang === 'en' ? 'Next Pandal ➔' : 'পরবর্তী মণ্ডপে চলুন ➔')}
+                {currentStopIndex === totalStops - 1 ? t('tour_complete') : t('next_pandal')}
               </button>
             ) : (
               <button 

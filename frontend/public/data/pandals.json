@@ -1112,5 +1112,101 @@
       "checkInRadius": 150
     },
     "tags": []
+  },
+  {
+    "id": "khajurdihi_1",
+    "name": "Khajurdihi প্যান্ডেল 1",
+    "name_en": "Khajurdihi Pandal 1",
+    "city": "Khajurdihi",
+    "zone": "",
+    "lat": 23.617754,
+    "lng": 88.119206,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "khajurdihi_2",
+    "name": "Khajurdihi প্যান্ডেল 2",
+    "name_en": "Khajurdihi Pandal 2",
+    "city": "Khajurdihi",
+    "zone": "",
+    "lat": 23.616829, 
+    "lng": 88.119777,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "khajurdihi_3",
+    "name": "Khajurdihi প্যান্ডেল 3",
+    "name_en": "Khajurdihi Pandal 3",
+    "city": "Khajurdihi",
+    "zone": "",
+    "lat": 23.618408, 
+    "lng": 88.119231,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "khajurdihi_4",
+    "name": "Khajurdihi প্যান্ডেল 4",
+    "name_en": "Khajurdihi Pandal 4",
+    "city": "Khajurdihi",
+    "zone": "",
+    "lat": 23.618802, 
+    "lng": 88.119295,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "khajurdihi_5",
+    "name": "Khajurdihi প্যান্ডেল 5",
+    "name_en": "Khajurdihi Pandal 5",
+    "city": "Khajurdihi",
+    "zone": "",
+    "lat": 23.615560,
+    "lng": 88.120160,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "khajurdihi_6",
+    "name": "Khajurdihi প্যান্ডেল 6",
+    "name_en": "Khajurdihi Pandal 6",
+    "city": "Khajurdihi",
+    "zone": "",
+    "lat": 23.613926, 
+"lng": 88.120598,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
   }
 ]

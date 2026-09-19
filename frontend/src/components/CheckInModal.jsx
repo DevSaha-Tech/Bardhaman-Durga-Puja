@@ -69,7 +69,7 @@ export default function CheckInModal({ pandal, onDismiss }) {
             disabled={checkingIn}
             className="py-3 px-2 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-base transition-colors shadow-md shadow-green-600/20 disabled:opacity-50 flex items-center justify-center"
           >
-            {checkingIn ? <Loader2 className="w-5 h-5 animate-spin" /> : (lang === 'en' ? 'Yes, Reached' : 'হ্যাঁ, পৌঁছে গেছি')}
+            {checkingIn ? <Loader2 className="w-5 h-5 animate-spin" /> : t('yes_reached')}
           </button>
           
           <button
@@ -77,7 +77,7 @@ export default function CheckInModal({ pandal, onDismiss }) {
             disabled={checkingIn}
             className="py-3 px-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-base transition-colors disabled:opacity-50"
           >
-            {lang === 'en' ? 'Not Yet' : 'না, পৌঁছাইনি'}
+            {t('not_yet')}
           </button>
         </div>
       </div>

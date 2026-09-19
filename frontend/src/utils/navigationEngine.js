@@ -189,7 +189,7 @@ export function parseManeuver(step, t) {
   const modifier = step.maneuver.modifier;
   const type     = step.maneuver.type;
 
-  if (type === 'arrive') return { text: t('arrive', { name: '' }), icon: 'MapPin' };
+  if (type === 'arrive') return { text: t('straight'), icon: 'ArrowUp' };
 
   switch (modifier) {
     case 'left':

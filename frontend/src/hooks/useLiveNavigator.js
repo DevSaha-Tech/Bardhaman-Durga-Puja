@@ -122,17 +122,20 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
     speakPrompt(t('tour_complete'));
   };
 
-  const sanitizeName = (p) => {
-    let name = (p?.name && p.name.trim()) || (p?.name_en && p.name_en.trim()) || 'মণ্ডপ';
-    if (/\d/.test(name)) name = name.replace(/\s*[\d.]+/g, '').trim();
-    if (/^[A-Z]\d/i.test(name)) name = 'মণ্ডপ';
-    return name;
-  };
+  const getPandalName = React.useCallback((pandal) => {
+    if (!pandal) return 'মণ্ডপ';
+    if (lang === 'en') return pandal.name_en || pandal.name || 'মণ্ডপ';
+    return pandal.name_bn || pandal.name || pandal.name_en || 'মণ্ডপ';
+  }, [lang]);
 
-  const getPandalName = (pandal) => {
-    if (!pandal) return '';
-    return lang === 'en' ? pandal.name_en || pandal.name : pandal.name_bn || pandal.name;
-  };
+  const sanitizeName = React.useCallback((p) => {
+    let name = getPandalName(p);
+    // Remove test prefix and pure digits, keep bengali words
+    name = name.replace(/^Test\s*[\d.]+/i, '');
+    name = name.replace(/^[A-Z\d-]+\s*/i, '');
+    if (/^[\d.\s]+$/.test(name)) return 'মণ্ডপ';
+    return name.trim() || 'মণ্ডপ';
+  }, [getPandalName]);
 
   const skipToNext = () => {
     if (currentStopIndex < optimizedRoute.length - 1) {
@@ -176,7 +179,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
       if (distMeters <= 35) {
         consecutiveArrivalsRef.current += 1;
         if (consecutiveArrivalsRef.current >= 2) {
-          speakPrompt(t('arrive', { name: getPandalName(activePandal) }));
+          // speakPrompt removed per fix 3
           consecutiveArrivalsRef.current = 0;
           return;
         }
@@ -320,7 +323,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
         }
       }
     }
-  }, [activePandal, distanceToTarget, isNavigating, lang, speakPrompt]);
+  }, [activePandal, distanceToTarget, isNavigating, lang, speakPrompt, sanitizeName]);
 
   return {
     isNavigating,
@@ -344,6 +347,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
     isSpeaking,
     osrmError,
     gpsPermissionDenied,
-    liveCounts: liveCountsRef.current
+    liveCounts: liveCountsRef.current,
+    speakPrompt
   };
 }

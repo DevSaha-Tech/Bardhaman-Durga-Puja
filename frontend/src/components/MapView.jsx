@@ -69,6 +69,9 @@ function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute }) 
     };
   }, [map]);
 
+  const userLat = userLocation?.lat;
+  const userLng = userLocation?.lng;
+
   useEffect(() => {
     if (isUserPanning) return; // Guard for fix 1
 
@@ -95,13 +98,13 @@ function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute }) 
         duration: 0.5,
       });
     } else if (selectedRoute && selectedRoute.length > 0) {
-      const points = userLocation ? [userLocation, ...selectedRoute] : selectedRoute;
+      const points = userLat && userLng ? [{ lat: userLat, lng: userLng }, ...selectedRoute] : selectedRoute;
       const bounds = L.latLngBounds(points.map(p => [p.lat || p[0], p.lng || p[1]]));
       map.fitBounds(bounds, { padding: [50, 50], animate: true, duration: 0.5 });
-    } else if (userLocation) {
-      map.setView([userLocation.lat, userLocation.lng], 16, { animate: true });
+    } else if (userLat && userLng) {
+      map.setView([userLat, userLng], 16, { animate: true });
     }
-  }, [position, isNavigating, userLocation, selectedRoute, map, isUserPanning]);
+  }, [position, isNavigating, userLat, userLng, selectedRoute, map, isUserPanning]);
 
   return isUserPanning && isNavigating ? (
     <div className="leaflet-bottom leaflet-right mb-72 mr-4 pointer-events-auto z-[1000]">
@@ -254,7 +257,12 @@ export default function MapView({
   }, [userLocation]);
 
   // Determine which polyline to show during navigation
-  const navigationPolyline = osrmPolyline.length > 0 ? osrmPolyline : [];
+  const stablePosition = React.useMemo(() => {
+    if (isNavigating && userLat && userLng) {
+      return [userLat, userLng];
+    }
+    return null;
+  }, [isNavigating, userLat, userLng]);
 
   return (
     <>
@@ -274,7 +282,7 @@ export default function MapView({
         />
         
         <AutoCenterMap 
-          position={isNavigating && userLocation ? [userLocation.lat, userLocation.lng] : null} 
+          position={stablePosition} 
           isNavigating={isNavigating} 
           userLocation={userLocation}
           selectedRoute={selectedRoute} 

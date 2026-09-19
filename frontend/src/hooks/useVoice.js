@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 
 export function useVoice({ lang }) {
   const isVoiceMutedRef = useRef(false);
@@ -16,6 +16,8 @@ export function useVoice({ lang }) {
       setIsSpeaking(false);
     }
   };
+  const langRef = useRef(lang);
+  useEffect(() => { langRef.current = lang; }, [lang]);
 
   const speak = useCallback((text) => {
     if (isVoiceMutedRef.current || typeof window === 'undefined' || !window.speechSynthesis) return;
@@ -25,7 +27,7 @@ export function useVoice({ lang }) {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     
-    if (lang === 'en') {
+    if (langRef.current === 'en') {
       utterance.lang = 'en-IN';
       utterance.rate = 0.9; 
       utterance.pitch = 1.0; 
@@ -46,7 +48,7 @@ export function useVoice({ lang }) {
     setTimeout(() => {
       lastSpokenRef.current = '';
     }, 15000);
-  }, [lang]);
+  }, []);
 
   return { speak, isVoiceMuted, setIsVoiceMuted, isSpeaking };
 }

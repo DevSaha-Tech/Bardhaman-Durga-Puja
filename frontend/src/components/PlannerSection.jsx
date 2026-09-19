@@ -75,18 +75,30 @@ export default function PlannerSection() {
   const { lang, t } = useLanguage();
   const [pandalsData, setPandalsData] = useState([]);
   const [isMounted, setIsMounted] = useState(false);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(true);
-  const [isDrawerExpanded, setIsDrawerExpanded] = useState(false);
+  const [drawerState, setDrawerState] = useState('half');
   const [touchStartY, setTouchStartY] = useState(null);
+  const [touchCurrentY, setTouchCurrentY] = useState(null);
   const { position: startLocation, error: gpsError, permission: gpsPermission, retry: retryGPS } = useGeolocation({ mode: 'once' });
 
   const handleTouchStart = (e) => setTouchStartY(e.touches[0].clientY);
-  const handleTouchEnd = (e) => {
-    if (touchStartY === null) return;
-    const diff = e.changedTouches[0].clientY - touchStartY;
-    if (diff > 40 && isDrawerOpen) setIsDrawerOpen(false); // Dragged down
-    if (diff < -40 && !isDrawerOpen) setIsDrawerOpen(true); // Dragged up (just in case)
+  const handleTouchMove = (e) => setTouchCurrentY(e.touches[0].clientY);
+  const handleTouchEnd = () => {
+    if (touchStartY === null || touchCurrentY === null) return;
+    const diff = touchCurrentY - touchStartY;
     setTouchStartY(null);
+    setTouchCurrentY(null);
+
+    if (diff > 80) {
+      // dragged down
+      setDrawerState(drawerState === 'expanded' ? 'half'
+                    : drawerState === 'half'     ? 'closed'
+                    : 'closed');
+    } else if (diff < -80) {
+      // dragged up
+      setDrawerState(drawerState === 'closed' ? 'half'
+                    : drawerState === 'half'   ? 'expanded'
+                    : 'expanded');
+    }
   };
 
   // Route Persistence state
@@ -248,9 +260,9 @@ export default function PlannerSection() {
       </div>
 
       {/* Floating Toggle Button (Visible only when drawer is closed) */}
-      {!isDrawerOpen && !liveNavState.isNavigating && (
+      {drawerState === 'closed' && !liveNavState.isNavigating && (
         <button 
-          onClick={() => setIsDrawerOpen(true)}
+          onClick={() => setDrawerState('half')}
           className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-white rounded-full p-3 shadow-xl border border-gray-200 text-red-700 animate-bounce md:hidden"
         >
           <ChevronRight className="w-6 h-6 -rotate-90" />
@@ -261,30 +273,33 @@ export default function PlannerSection() {
       {!liveNavState.isNavigating && (
         <div 
           className={`absolute bottom-0 left-0 right-0 md:relative md:w-[420px] bg-white/97 backdrop-blur-2xl shadow-[0_-12px_48px_rgba(0,0,0,0.12)] z-10 flex flex-col rounded-t-[2rem] md:rounded-none transition-transform duration-300 ease-in-out ${
-            isDrawerOpen
-              ? (isDrawerExpanded
-                  ? 'translate-y-0 h-[85vh] md:h-full'
-                  : 'translate-y-0 h-[45vh] md:h-full')
-              : 'translate-y-full h-[45vh]'
-          }`}
+            drawerState === 'closed' ? 'translate-y-full' : 'translate-y-0'
+          } ${
+            drawerState === 'expanded' ? 'h-[85vh]' : drawerState === 'half' ? 'h-[45vh]' : 'h-[45vh]'
+          } md:h-full`}
         >
 
           {/* Mobile drag handle - acts as close button and swipe target */}
           <div 
             className="w-full flex justify-center pt-3 pb-4 md:hidden cursor-pointer touch-none"
-            onClick={() => setIsDrawerOpen(false)}
+            onClick={() => setDrawerState('closed')}
             onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
             <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
           </div>
 
           <button
-            onClick={() => setIsDrawerExpanded(v => !v)}
+            onClick={() => {
+              setDrawerState(drawerState === 'closed' ? 'half'
+                            : drawerState === 'half'   ? 'expanded'
+                            : 'closed');
+            }}
             className="absolute top-3 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 md:hidden"
             aria-label="Expand drawer"
           >
-            {isDrawerExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
+            {drawerState === 'expanded' ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
           </button>
 
           <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-6 pt-2 space-y-4">
