@@ -3,6 +3,7 @@ import "./globals.css";
 import "leaflet/dist/leaflet.css";
 import { LanguageProvider } from '@/context/LanguageContext';
 import SiteTracker from '@/components/SiteTracker';
+import FeedbackMount from '@/components/FeedbackMount';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,6 +43,7 @@ export default function RootLayout({ children }) {
         <LanguageProvider>
           <SiteTracker />
           {children}
+          <FeedbackMount />
         </LanguageProvider>
       </body>
     </html>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, VolumeX, ArrowUp, ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight, MapPin, X, FastForward, CheckCircle, ExternalLink } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import CheckInModal from './CheckInModal';
@@ -40,9 +40,9 @@ export default function LiveNavigationHUD({ navState, totalStops }) {
   const isArrived = activePandal && distanceToTarget !== null && distanceToTarget <= 50;
   const showModal = isArrived && modalDismissedFor !== activePandal?.id && !hasCheckedIn;
 
-  const arrivedVoiceRef = React.useRef(null);
+  const arrivedVoiceRef = useRef(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (activePandal && isArrived && arrivedVoiceRef.current !== activePandal.id) {
       const getPandalName = (p) => lang === 'en' ? (p.name_en || p.name) : (p.name_bn || p.name);
       arrivedVoiceRef.current = activePandal.id;
@@ -54,7 +54,7 @@ export default function LiveNavigationHUD({ navState, totalStops }) {
   }, [isArrived, activePandal?.id, lang, navState, activePandal]);
 
   // Auto-mute when checked in to prevent spamming instructions while user is inside pandal
-  React.useEffect(() => {
+  useEffect(() => {
     if (hasCheckedIn && !isVoiceMuted) {
       setIsVoiceMuted(true);
     }

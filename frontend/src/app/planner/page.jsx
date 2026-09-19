@@ -1,7 +1,6 @@
 import Navbar from '@/components/Navbar';
 import PlannerSection from '@/components/PlannerSection';
 import Footer from '@/components/Footer';
-import FeedbackButton from '@/components/FeedbackButton';
 
 export const metadata = {
   title: "Plan Your Puja Route — Bardhaman 2026",
@@ -24,8 +23,6 @@ export default function PlannerPage() {
       <main className="flex-grow relative h-full">
         <PlannerSection />
       </main>
-
-      <FeedbackButton />
     </div>
   );
 }

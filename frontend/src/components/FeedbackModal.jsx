@@ -11,7 +11,7 @@ export default function FeedbackModal({ isOpen, onClose }) {
   const [pandalName, setPandalName] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [status, setStatus] = useState(null); // 'success' | 'error' | null
+  const [status, setStatus] = useState(null);
 
   if (!isOpen) return null;
 
@@ -39,7 +39,6 @@ export default function FeedbackModal({ isOpen, onClose }) {
       setStatus('success');
       setTimeout(() => {
         onClose();
-        // Reset state
         setCategory('general');
         setPandalName('');
         setMessage('');
@@ -60,11 +59,17 @@ export default function FeedbackModal({ isOpen, onClose }) {
   const showPandalField = category === 'add_pandal' || category === 'data';
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white w-full h-auto max-h-[90vh] md:max-w-[480px] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div 
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white w-full h-auto max-h-[90vh] md:max-w-[480px] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white">
           <h2 className="text-xl font-bold text-gray-900">{t('feedback_title')}</h2>
           <button 
             onClick={onClose}
@@ -75,7 +80,7 @@ export default function FeedbackModal({ isOpen, onClose }) {
         </div>
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto">
+        <div className="p-6 overflow-y-auto bg-white">
           {status === 'success' ? (
             <div className="bg-green-50 text-green-700 p-4 rounded-xl text-center font-medium animate-in fade-in">
               {t('feedback_thanks')}
@@ -89,7 +94,7 @@ export default function FeedbackModal({ isOpen, onClose }) {
                 <select 
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                  className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
                 >
                   {categories.map(c => (
                     <option key={c.id} value={c.id}>{c.label}</option>
@@ -107,7 +112,7 @@ export default function FeedbackModal({ isOpen, onClose }) {
                     value={pandalName}
                     onChange={(e) => setPandalName(e.target.value)}
                     placeholder="যেমন: সর্বমঙ্গলা"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                    className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
                   />
                 </div>
               )}
@@ -119,10 +124,8 @@ export default function FeedbackModal({ isOpen, onClose }) {
                 <textarea 
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="এখানে লিখুন..."
-                  rows={4}
-                  required
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all resize-none"
+                  placeholder={t('feedback_message_placeholder')}
+                  className="w-full min-h-[100px] bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 resize-none outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
                 />
               </div>
 
@@ -132,18 +135,22 @@ export default function FeedbackModal({ isOpen, onClose }) {
                 </div>
               )}
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-row gap-3 pt-2">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
+                  className="w-full md:w-auto flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
                 >
                   {t('feedback_cancel')}
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || !message.trim()}
-                  className="flex-1 px-4 py-2.5 bg-red-800 text-white font-semibold rounded-xl hover:bg-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  disabled={isSubmitting || message.length === 0}
+                  className={`w-full md:w-auto flex-1 px-4 py-2.5 font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                    isSubmitting || message.length === 0 
+                      ? 'bg-red-700 text-white opacity-50 cursor-not-allowed'
+                      : 'bg-red-700 text-white opacity-100 hover:bg-red-800'
+                  }`}
                 >
                   {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
                   {t('feedback_submit')}
