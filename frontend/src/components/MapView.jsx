@@ -177,6 +177,7 @@ export default function MapView({
   const [osrmError, setOsrmError] = useState(false);
   const [haversinePolyline, setHaversinePolyline] = useState(null);
   const [isUserPanning, setIsUserPanning] = useState(false);
+  const [hudHeight, setHudHeight] = useState(0);
   
   const getMapCenterAndZoom = () => {
     if (userLocation) return { center: [userLocation.lat, userLocation.lng], zoom: 14 };
@@ -257,6 +258,26 @@ export default function MapView({
     }
     return null;
   }, [isNavigating, userLat, userLng]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!isNavigating) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHudHeight(0);
+      return;
+    }
+    const el = document.getElementById('navigation-hud');
+    if (!el) return;
+
+    const updateHeight = () => {
+      setHudHeight(el.getBoundingClientRect().height);
+    };
+    updateHeight();
+
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isNavigating]);
 
   return (
     <div className="relative w-full h-full">
@@ -416,7 +437,12 @@ export default function MapView({
       {isUserPanning && isNavigating && (
         <button
           onClick={() => setIsUserPanning(false)}
-          className="absolute right-4 bottom-32 z-[1000] w-12 h-12 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl"
+          className="absolute right-4 z-[1000] w-12 h-12 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl transition-all duration-300"
+          style={{
+            bottom: hudHeight > 0
+              ? `${hudHeight + 16}px`
+              : '50vh'
+          }}
           aria-label="Re-centre"
           title="Re-centre"
         >
