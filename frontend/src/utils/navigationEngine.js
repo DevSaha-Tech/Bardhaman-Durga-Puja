@@ -1,13 +1,5 @@
 import * as turf from '@turf/turf';
-
-// ============================================================
-//  In-memory route cache: key = "lng1,lat1|lng2,lat2|profile"
-// ============================================================
-const routeCache = new Map();
-
-function cacheKey(origin, dest, profile) {
-  return `${origin[0].toFixed(5)},${origin[1].toFixed(5)}|${dest[0].toFixed(5)},${dest[1].toFixed(5)}|${profile}`;
-}
+import { getCachedRoute, setCachedRoute, ROUTE_CACHE_VERSION } from '../lib/routeCache';
 
 // ============================================================
 //  Provider 1: OSRM (fast, sometimes rate-limited)
@@ -119,11 +111,13 @@ function decodePolyline(encoded, precision = 6) {
  * @param {string} profile  'walking' | 'cycling' | 'driving'
  */
 export async function fetchOSRMRoute(origin, destination, profile = 'walking') {
-  const key = cacheKey(origin, destination, profile);
+  const rnd = (val) => Number(val).toFixed(5);
+  const key = `${ROUTE_CACHE_VERSION}:${rnd(origin[0])},${rnd(origin[1])}->${rnd(destination[0])},${rnd(destination[1])}:${profile}`;
 
   // 1. Cache hit → instant return
-  if (routeCache.has(key)) {
-    return routeCache.get(key);
+  const cached = await getCachedRoute(key);
+  if (cached) {
+    return cached;
   }
 
   // 2. Try OSRM with 5-second timeout
@@ -133,7 +127,7 @@ export async function fetchOSRMRoute(origin, destination, profile = 'walking') {
     const osrm    = await fetchOSRM(origin, destination, profile, ctrl1.signal);
     clearTimeout(timer1);
     if (osrm) {
-      routeCache.set(key, osrm);
+      setCachedRoute(key, osrm); // Do not await
       return osrm;
     }
   } catch (e) {
@@ -147,7 +141,7 @@ export async function fetchOSRMRoute(origin, destination, profile = 'walking') {
     const valhalla = await fetchValhalla(origin, destination, profile, ctrl2.signal);
     clearTimeout(timer2);
     if (valhalla) {
-      routeCache.set(key, valhalla);
+      setCachedRoute(key, valhalla); // Do not await
       return valhalla;
     }
   } catch (e) {
@@ -163,7 +157,9 @@ export async function fetchOSRMRoute(origin, destination, profile = 'walking') {
 //  Clear cache when changing targets (call on stop change)
 // ============================================================
 export function clearRouteCache() {
-  routeCache.clear();
+  // We no longer clear the cache entirely on target change
+  // as it's persistent and self-managing, but we keep the export
+  // signature so existing imports don't break.
 }
 
 // ============================================================

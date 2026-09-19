@@ -1,5 +1,6 @@
 import { APP_CONFIG } from '../config/appConfig';
 import * as turf from '@turf/turf';
+import { getCachedRoute, setCachedRoute, ROUTE_CACHE_VERSION } from '../lib/routeCache';
 
 const OSRM_BASE_URL = 'https://router.project-osrm.org';
 
@@ -19,6 +20,12 @@ export async function fetchOSRMRoute(startLng, startLat, endLng, endLat, mode = 
   // OSRM profiles: driving, walking, cycling
   const profile = mode === 'bike' ? 'cycling' : mode === 'car' ? 'driving' : 'walking';
   
+  const rnd = (val) => Number(val).toFixed(5);
+  const cacheKey = `${ROUTE_CACHE_VERSION}:${rnd(startLng)},${rnd(startLat)}->${rnd(endLng)},${rnd(endLat)}:${profile}`;
+
+  const cached = await getCachedRoute(cacheKey);
+  if (cached) return cached;
+  
   try {
     const url = `${OSRM_BASE_URL}/route/v1/${profile}/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson&steps=true`;
     const response = await fetch(url);
@@ -27,12 +34,14 @@ export async function fetchOSRMRoute(startLng, startLat, endLng, endLat, mode = 
     
     if (data.routes && data.routes.length > 0) {
       const route = data.routes[0];
-      return {
+      const result = {
         distanceKm: route.distance / 1000,
         durationMin: route.duration / 60,
         geometry: route.geometry,
         steps: route.legs[0].steps
       };
+      setCachedRoute(cacheKey, result); // Do not await
+      return result;
     }
   } catch (err) {
     console.warn("OSRM routing failed, falling back to straight-line", err);
