@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import {
   MapPin, Play, Navigation, X, AlertCircle,
   Footprints, Bike, Car, Trophy, Star, Timer, Infinity as InfinityIcon,
-  Clock, Eye, Ruler, Flag, ChevronRight, Zap, Moon, Flame, ChevronDown, ChevronUp
+  Clock, Eye, Ruler, Flag, ChevronRight, Zap, Moon, ChevronDown, ChevronUp
 } from 'lucide-react';
 import {
   solveTsp, filterTopN, solveBudget, calcItinerary,

@@ -8,6 +8,8 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { APP_CONFIG } from '../config/appConfig';
 import { useVoice } from './useVoice';
 
+const ARRIVAL_RADIUS_METERS = 35;
+
 export function useLiveNavigator(optimizedRoute, lang, t) {
   const [isNavigating, setIsNavigating] = useState(false);
   const [currentStopIndex, setCurrentStopIndex] = useState(0);
@@ -195,8 +197,8 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
       const distMeters = Math.round(distKm * 1000);
       setDistanceToTarget(distMeters);
 
-      // 2. Ghost Arrival Protection (<= 35m for 2 consecutive ticks)
-      if (distMeters <= 35) {
+      // 2. Ghost Arrival Protection (<= ARRIVAL_RADIUS_METERS for 2 consecutive ticks)
+      if (distMeters <= ARRIVAL_RADIUS_METERS) {
         consecutiveArrivalsRef.current += 1;
         if (consecutiveArrivalsRef.current >= 2) {
           // speakPrompt removed per fix 3
@@ -255,7 +257,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
             const stepEndLocation = turf.point([endLng, endLat]);
             const distToStepEndMeters = Math.round(turf.distance(rawUserPoint, stepEndLocation) * 1000);
 
-            if (distToStepEndMeters < 25 && currentStepIndex < steps.length - 1) {
+            if (distToStepEndMeters < ARRIVAL_RADIUS_METERS && currentStepIndex < steps.length - 1) {
               const nextIdx = currentStepIndex + 1;
               setCurrentStepIndex(nextIdx);
               const nextStep = steps[nextIdx];

@@ -34,6 +34,10 @@ export async function fetchOSRMRoute(startLng, startLat, endLng, endLat, mode = 
     
     if (data.routes && data.routes.length > 0) {
       const route = data.routes[0];
+      if (!route.legs || route.legs.length === 0) {
+        console.warn('OSRM returned a route with no legs');
+        throw new Error('INVALID_ROUTE');
+      }
       const result = {
         distanceKm: route.distance / 1000,
         durationMin: route.duration / 60,

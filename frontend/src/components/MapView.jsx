@@ -1,7 +1,5 @@
 "use client";
 
-import { APP_CONFIG } from '../config/appConfig';
-
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, Tooltip, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -19,16 +17,6 @@ L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-// Custom Red Icon for Planning Phase Location
-const planningUserIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
 });
 
 // Custom Orange Icon for Trending Pandals
@@ -148,14 +136,6 @@ function LocateMeButton({ userLocation }) {
   );
 }
 
-// Generate straight-line polyline for Haversine fallback
-const generateHaversinePolyline = (origin, orderedPandals) => {
-  const coords = [origin];
-  orderedPandals.forEach(p => coords.push([p.lat, p.lng]));
-  coords.push(origin); // Return to origin
-  return coords;
-};
-
 export default function MapView({ 
   pandalsData = [], 
   selectedRoute = [], 
@@ -175,7 +155,6 @@ export default function MapView({
   const { lang, t } = useLanguage();
   const [reviewPandal, setReviewPandal] = useState(null);
   const [osrmError, setOsrmError] = useState(false);
-  const [haversinePolyline, setHaversinePolyline] = useState(null);
   const [isUserPanning, setIsUserPanning] = useState(false);
   const [hudHeight, setHudHeight] = useState(0);
   
@@ -196,7 +175,6 @@ export default function MapView({
   };
 
   const { center: mapCenter, zoom: mapZoom } = getMapCenterAndZoom();
-  const liveCenter = mapCenter; // fallback reference for haversine origin
 
   // State to track zoom level for marker tooltips
   const [currentZoom, setCurrentZoom] = useState(mapZoom);
@@ -204,15 +182,6 @@ export default function MapView({
   const osrmPolyline = activeRouteLine 
     ? activeRouteLine.map(c => [c[1], c[0]])
     : routeData?.geometry?.coordinates?.map(c => [c[1], c[0]]) || [];
-
-  // Generate Haversine fallback polyline when OSRM fails
-  useEffect(() => {
-    if (isNavigating && activePandal && selectedRoute.length > 0) {
-      const origin = userLocation ? [userLocation.lat, userLocation.lng] : liveCenter;
-      const remainingRoute = selectedRoute.slice(selectedRoute.findIndex(p => p.id === activePandal.id));
-      setHaversinePolyline(generateHaversinePolyline(origin, remainingRoute));
-    }
-  }, [isNavigating, activePandal, selectedRoute, userLocation]);
 
   const handleCheckIn = useCallback(async (pandal) => {
     // Geofence check
@@ -326,11 +295,6 @@ export default function MapView({
                 positions={osrmPolyline} 
                 pathOptions={{ color: '#4285F4', weight: 7, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }} 
               />
-            )}
-            
-            {/* Haversine Fallback removed per instructions */}
-            {(osrmError || osrmPolyline.length === 0) && haversinePolyline && (
-              <></>
             )}
             
             {/* Fallback indicator */}
