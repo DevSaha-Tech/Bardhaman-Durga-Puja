@@ -17,6 +17,7 @@ node_modules/
 frontend/.next/
 frontend/out/
 frontend/build/
+frontend/.env.local.example
 
 # ─── Backend build ───────────────────────────────────────────
 backend/dist/
@@ -30,8 +31,8 @@ coverage/
 # ─── Environment & Secrets ───────────────────────────────────
 .env
 .env.*
-!.env.example
-!.env.*.example
+.env.example
+.env.*.example
 
 # ─── Logs ────────────────────────────────────────────────────
 logs/

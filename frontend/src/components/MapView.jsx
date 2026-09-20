@@ -286,7 +286,7 @@ export default function MapView({
       >
         <TileLayer
           url="https://puja-tiles-proxy.devsahatech.workers.dev/{z}/{x}/{y}.png"
-          attribution='&copy; OpenStreetMap contributors'
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a>'
           maxNativeZoom={19}
           maxZoom={22}
         />
