@@ -149,6 +149,8 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
 
   const routeDataRef  = useRef(null);
   const isFetchingRef  = useRef(false);
+  const lastAcceptedLocationRef = useRef(null);
+  const lastProcessedRef = useRef(0);
 
   useEffect(() => {
     routeDataRef.current = routeData;
@@ -158,6 +160,10 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
   useEffect(() => {
     if (!isNavigating || !activePandal || !userLocation) return;
     const processGPS = async () => {
+      const now = Date.now();
+      if (now - lastProcessedRef.current < 3000) return;
+      lastProcessedRef.current = now;
+
       // 1. Ignore inaccurate GPS readings (Bounce Protection)
       if (userLocation.accuracy && userLocation.accuracy > 50) {
         console.warn('GPS reading ignored due to low accuracy:', userLocation.accuracy);
@@ -166,6 +172,20 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
 
       const rawLat = userLocation.lat;
       const rawLng = userLocation.lng;
+
+      // Guard against GPS jumps > 100m
+      if (lastAcceptedLocationRef.current) {
+        const distJump = turf.distance(
+          turf.point([lastAcceptedLocationRef.current[0], lastAcceptedLocationRef.current[1]]),
+          turf.point([rawLng, rawLat])
+        ) * 1000;
+        
+        if (distJump > 100 && (now - lastAcceptedLocationRef.current.time < 3000)) {
+          console.warn('GPS glitch detected! Jumped', Math.round(distJump), 'meters in < 3s');
+          return;
+        }
+      }
+      lastAcceptedLocationRef.current = { 0: rawLng, 1: rawLat, time: now };
       const heading = userLocation.heading || 0;
 
       const rawUserPoint = turf.point([rawLng, rawLat]);

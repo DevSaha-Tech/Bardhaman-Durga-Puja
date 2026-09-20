@@ -112,6 +112,7 @@ export default function PlannerSection() {
   const manualPandals = routeState.manualPandals || [];
   
   const [liveCounts, setLiveCounts] = useState({});
+  const [errorPandals, setErrorPandals] = useState(null);
 
   // Fix Hydration Error
   useEffect(() => setIsMounted(true), []);
@@ -128,7 +129,10 @@ export default function PlannerSection() {
   // Fetch data & Handle URL Sharing
   useEffect(() => {
     fetch('/data/pandals.json')
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error('Failed to fetch');
+        return r.json();
+      })
       .then(d => {
         setPandalsData(d);
         // Check URL parameters
@@ -151,7 +155,10 @@ export default function PlannerSection() {
           }
         }
       })
-      .catch(err => console.error('Error loading pandals:', err));
+      .catch(err => {
+        console.error('Error loading pandals:', err);
+        setErrorPandals('লোড করতে সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+      });
   }, [updateRouteState]);
 
   // Compute route based on selected mode
@@ -236,6 +243,12 @@ export default function PlannerSection() {
       {(gpsPermission === 'denied' || (gpsError && gpsError.includes('denied'))) && (
         <div className="absolute top-0 left-0 right-0 z-[60] bg-red-600 text-white px-4 py-3 text-center text-sm shadow-md font-medium pt-6">
           Location access denied. Enable it in your browser to plan a route from your position.
+        </div>
+      )}
+      
+      {errorPandals && (
+        <div className="absolute top-0 left-0 right-0 z-[60] bg-orange-600 text-white px-4 py-3 text-center text-sm shadow-md font-medium pt-6">
+          {errorPandals}
         </div>
       )}
 

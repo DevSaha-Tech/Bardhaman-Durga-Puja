@@ -236,12 +236,7 @@ export default function MapView({
 
     try {
       if (isSupabaseConfigured) {
-        let visitorId = safeStorage.get('puja_visitor_id');
-        if (!visitorId) {
-          visitorId = crypto.randomUUID();
-          safeStorage.set('puja_visitor_id', visitorId);
-        }
-        await supabase.from('pandal_visits').insert([{ pandal_id: String(pandal.id), user_uuid: visitorId }]);
+        await supabase.from('pandal_visits').insert([{ pandal_id: String(pandal.id) }]);
       }
       safeStorage.set(`last_checkin_${pandal.id}`, now.toString());
       alert('চেক-ইন সফল হয়েছে!');
