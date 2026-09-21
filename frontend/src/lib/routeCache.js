@@ -4,7 +4,7 @@ export const ROUTE_CACHE_VERSION = 'v1';
 
 const DB_NAME = 'puja-routes';
 const STORE_NAME = 'routes';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const MAX_ENTRIES = 500;
 const EVICT_COUNT = 50;
 const MIN_FREE_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -23,6 +23,9 @@ function getDB() {
       upgrade(db) {
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           db.createObjectStore(STORE_NAME, { keyPath: 'key' });
+        }
+        if (!db.objectStoreNames.contains('batch_progress')) {
+          db.createObjectStore('batch_progress', { keyPath: 'routeSignature' });
         }
       },
       blocked() {

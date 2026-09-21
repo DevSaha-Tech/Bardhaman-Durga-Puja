@@ -2,16 +2,18 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import {
-  MapPin, Play, Navigation, X, AlertCircle,
+import { 
+  MapPin, Play, Navigation, X, AlertCircle, List, Compass,
   Footprints, Bike, Car, Trophy, Star, Timer, Infinity as InfinityIcon,
-  Clock, Eye, Ruler, Flag, ChevronRight, Zap, Moon, ChevronDown, ChevronUp
+  Clock, Eye, Ruler, Flag, ChevronRight, Moon, ChevronDown, ChevronUp,
+  Settings2, Share, ExternalLink, Zap, Target
 } from 'lucide-react';
 import {
   solveTsp, filterTopN, solveBudget, calcItinerary,
   formatDuration, TRANSPORT_MODES, haversineDistance
 } from '../utils/tspSolver';
 import { generateGoogleMapsUrl } from '../utils/navigationUrl';
+import { APP_CONFIG } from '../config/appConfig';
 
 function formatDurationBn(totalMinutes) {
   const rounded = Math.round(totalMinutes);
@@ -21,11 +23,18 @@ function formatDurationBn(totalMinutes) {
   if (mins === 0) return `${hours} ঘণ্টা`;
   return `${hours} ঘণ্টা ${mins} মি`;
 }
+
 import { useLiveNavigator } from '../hooks/useLiveNavigator';
 import LiveNavigationHUD from './LiveNavigationHUD';
 import { useLanguage } from '@/context/LanguageContext';
-import TrendsPanel from './TrendsPanel';
 import Swal from 'sweetalert2';
+import {
+  getBatchProgress,
+  setBatchProgress,
+  clearBatchProgress,
+  computeRouteSignature,
+  getBatchCount
+} from '../lib/batchStorage';
 
 // Dynamically import MapView with SSR disabled
 const MapView = dynamic(() => import('./MapView'), {
@@ -42,22 +51,22 @@ const MapView = dynamic(() => import('./MapView'), {
 
 // --- Transport Mode pills ---
 const TRANSPORT_PILLS = [
-  { key: 'walking', Icon: Footprints, label: 'হাঁটা',  labelEn: 'Walk'  },
-  { key: 'cycling', Icon: Bike,       label: 'বাইক',   labelEn: 'Bike'  },
-  { key: 'driving', Icon: Car,        label: 'গাড়ি',   labelEn: 'Car'   },
+  { key: 'walking', Icon: Footprints, label: 'হেঁটে',  labelEn: 'Walk'  },
+  { key: 'car', Icon: Car,        label: 'গাড়িতে', labelEn: 'Vehicle' },
 ];
 
 const TOP_N_OPTIONS = [
   { n: 5,    Icon: Trophy, label: 'Top 5'  },
   { n: 10,   Icon: Star,   label: 'Top 10' },
-  { n: null, Icon: Flag,   label: lang => lang === 'en' ? 'All' : 'সব' },
+  { n: 15,   Icon: Star,   label: 'Top 15' },
+  { n: -1,   Icon: Flag,   label: lang => lang === 'en' ? 'All' : 'সব' },
 ];
 
 const BUDGET_OPTIONS = [
-  { minutes: 120,  Icon: Zap,          label: '২ ঘণ্টা', labelEn: '2 hr'     },
-  { minutes: 240,  Icon: Timer,        label: '৪ ঘণ্টা', labelEn: '4 hr'     },
-  { minutes: 360,  Icon: Moon,         label: '৬ ঘণ্টা', labelEn: '6 hr'     },
-  { minutes: null, Icon: InfinityIcon, label: 'যতখুশি', labelEn: 'Flexible' },
+  { minutes: 120,  Icon: Zap,          label: '২ ঘণ্টা', labelEn: '2 hours' },
+  { minutes: 240,  Icon: Timer,        label: '৪ ঘণ্টা', labelEn: '4 hours' },
+  { minutes: 360,  Icon: Moon,         label: '৬ ঘণ্টা', labelEn: '6 hours' },
+  { minutes: -1,   Icon: InfinityIcon, label: 'সারা দিন', labelEn: 'All day' },
 ];
 
 import { useRoutePersistence } from '../hooks/useRoutePersistence';
@@ -80,6 +89,14 @@ export default function PlannerSection() {
   const [touchCurrentY, setTouchCurrentY] = useState(null);
   const { position: startLocation, error: gpsError, permission: gpsPermission, retry: retryGPS } = useGeolocation({ mode: 'once' });
 
+  const [hasSelectedTime, setHasSelectedTime] = useState(false);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [isPickingFromMap, setIsPickingFromMap] = useState(false);
+  const [uiMode, setUiMode] = useState('main'); // 'main' or 'map_pick'
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
+  
+  const [batchState, setBatchState] = useState(null);
+
   const handleTouchStart = (e) => setTouchStartY(e.touches[0].clientY);
   const handleTouchMove = (e) => setTouchCurrentY(e.touches[0].clientY);
   const handleTouchEnd = () => {
@@ -89,12 +106,10 @@ export default function PlannerSection() {
     setTouchCurrentY(null);
 
     if (diff > 80) {
-      // dragged down
       setDrawerState(drawerState === 'expanded' ? 'half'
                     : drawerState === 'half'     ? 'closed'
                     : 'closed');
     } else if (diff < -80) {
-      // dragged up
       setDrawerState(drawerState === 'closed' ? 'half'
                     : drawerState === 'half'   ? 'expanded'
                     : 'expanded');
@@ -105,7 +120,7 @@ export default function PlannerSection() {
   const { routeState, updateRouteState, resetPlan } = useRoutePersistence();
 
   // UI State mapping to routeState
-  const plannerTab = routeState.plannerTab !== undefined ? routeState.plannerTab : null;
+  const plannerTab = routeState.plannerTab !== undefined ? routeState.plannerTab : 'budget';
   const topN = routeState.topN !== undefined ? routeState.topN : 5;
   const budgetMin = routeState.budgetMin !== undefined ? routeState.budgetMin : 240;
   const transportMode = routeState.transportMode || 'walking';
@@ -114,19 +129,14 @@ export default function PlannerSection() {
   const [liveCounts, setLiveCounts] = useState({});
   const [errorPandals, setErrorPandals] = useState(null);
 
-  // Fix Hydration Error
   useEffect(() => setIsMounted(true), []);
 
-  
-
-  // Helper updaters
   const setPlannerTab = (val) => updateRouteState({ plannerTab: val });
   const setTopN = (val) => updateRouteState({ topN: val });
   const setBudgetMin = (val) => updateRouteState({ budgetMin: val });
   const setTransportMode = (val) => updateRouteState({ transportMode: val });
   const setManualPandals = (val) => updateRouteState({ manualPandals: typeof val === 'function' ? val(manualPandals) : val });
 
-  // Fetch data & Handle URL Sharing
   useEffect(() => {
     fetch('/data/pandals.json')
       .then(r => {
@@ -135,7 +145,6 @@ export default function PlannerSection() {
       })
       .then(d => {
         setPandalsData(d);
-        // Check URL parameters
         if (typeof window !== 'undefined') {
           const urlParams = new URLSearchParams(window.location.search);
           const stopsParam = urlParams.get('stops');
@@ -149,7 +158,6 @@ export default function PlannerSection() {
                 manualPandals: selected,
                 transportMode: modeParam || 'walking'
               });
-              // Clean URL
               window.history.replaceState({}, document.title, window.location.pathname);
             }
           }
@@ -161,17 +169,19 @@ export default function PlannerSection() {
       });
   }, [updateRouteState]);
 
-  // Compute route based on selected mode
   const { optimizedRoute, stats, trimMessage, isPreviewMode } = useMemo(() => {
     if (pandalsData.length === 0) return { optimizedRoute: [], stats: null, trimMessage: null, isPreviewMode: false };
+    if (!hasUserInteracted) return { optimizedRoute: [], stats: null, trimMessage: null, isPreviewMode: false };
 
     let isPreview = false;
     
-    // Determine the base pandals to use for calculation based on tab
+    const effectiveTopN = topN === -1 ? null : topN;
+    const effectiveBudgetMin = budgetMin === -1 ? null : budgetMin;
+
     let selectedForCalc = [];
-    if (plannerTab === 'top') {
-      selectedForCalc = filterTopN(pandalsData, topN, startLocation);
-    } else if (plannerTab === 'budget') {
+    if (plannerTab === 'top' && topN !== null) {
+      selectedForCalc = filterTopN(pandalsData, effectiveTopN, startLocation);
+    } else if (plannerTab === 'budget' && budgetMin !== null) {
       selectedForCalc = [...pandalsData].sort((a, b) => (a.popularity ?? 99) - (b.popularity ?? 99));
     } else if (plannerTab === 'manual') {
       selectedForCalc = manualPandals;
@@ -188,57 +198,317 @@ export default function PlannerSection() {
 
     const END_NODE = { id: 'END', name: 'Return to Start', name_bn: 'শুরুর স্থান', name_en: 'Return to Start', zone: 'Destination', lat: origin.lat, lng: origin.lng };
 
+    const effectiveTransportMode = transportMode;
+
     const buildRoute = (pandals) => {
       if (pandals.length === 0) return { optimizedRoute: [], stats: null, trimMessage: null, isPreviewMode: isPreview };
       const nodes = isPreview ? [...pandals] : [{ id: '__START__', ...origin }, ...pandals];
-      const solved = solveTsp(nodes, transportMode).filter(p => p.id !== '__START__');
-      const itin = calcItinerary(origin, solved, transportMode);
+      const solved = solveTsp(nodes, effectiveTransportMode).filter(p => p.id !== '__START__');
+      const itin = calcItinerary(origin, solved, effectiveTransportMode);
       return { optimizedRoute: [...solved, END_NODE], stats: itin, trimMessage: null, isPreviewMode: isPreview };
     };
 
-    if (plannerTab === 'budget' && budgetMin) {
-      const { selected, stats: itin, trimmedCount } = solveBudget(origin, pandalsData, budgetMin, transportMode);
+    if (plannerTab === 'budget' && effectiveBudgetMin) {
+      const { selected, stats: itin, trimmedCount } = solveBudget(origin, pandalsData, effectiveBudgetMin, effectiveTransportMode);
       const bLabel = BUDGET_OPTIONS.find(b => b.minutes === budgetMin);
-      const trimMsg = trimmedCount > 0 ? `আপনার ${bLabel?.label ?? ''} বাজেটে সেরা ${selected.length}টি মণ্ডপ নির্বাচিত` : null;
+      const trimMsg = trimmedCount > 0 ? `আপনার ${bLabel?.label ?? 'নির্ধারিত'} বাজেটে সেরা ${selected.length}টি মণ্ডপ নির্বাচিত` : null;
       return { optimizedRoute: selected.length > 0 ? [...selected, END_NODE] : [], stats: itin, trimMessage: trimMsg, isPreviewMode: isPreview };
     }
 
-    if (plannerTab === 'trends') return { optimizedRoute: [], stats: null, trimMessage: null, isPreviewMode: false };
-
     return buildRoute(selectedForCalc);
-  }, [pandalsData, plannerTab, topN, budgetMin, transportMode, manualPandals, startLocation]);
+  }, [pandalsData, plannerTab, topN, budgetMin, transportMode, manualPandals, startLocation, hasUserInteracted]);
 
-  // Live Navigator
   const liveNavState = useLiveNavigator(optimizedRoute, lang, t);
 
-  // Sync live counts from hook to local state for MapView
   useEffect(() => {
     if (liveNavState.liveCounts) {
       setLiveCounts(liveNavState.liveCounts);
     }
   }, [liveNavState.liveCounts]);
 
-  // Handlers
+  useEffect(() => {
+    const stops = optimizedRoute
+      .filter(p => p.id !== 'END' && p.id !== '__START__')
+      .map(p => p.id);
+      
+    const loadBatchState = async () => {
+      if (stops.length <= 10) {
+        setBatchState(null);
+        return;
+      }
+      
+      const sig = computeRouteSignature(stops);
+      const record = await getBatchProgress(sig);
+      if (record && record.currentBatchIndex < record.batches.length) {
+        setBatchState(record);
+      } else {
+        setBatchState(null);
+      }
+    };
+    
+    loadBatchState();
+  }, [optimizedRoute]);
+
   const handleAddPandal = (pandal) => {
     setPlannerTab('manual');
+    setHasUserInteracted(true);
     if (!manualPandals.some(p => p.id === pandal.id))
       setManualPandals(prev => [...prev, pandal]);
   };
 
-  const handleRemovePandal = (id) => setManualPandals(prev => prev.filter(p => p.id !== id));
-
-  const handleSingleDirection = (pandal) => {
-    const mode = transportMode === 'driving' ? 'driving' : transportMode === 'cycling' ? 'bicycling' : 'walking';
-    const originLoc = liveNavState?.userLocation || startLocation;
-    const originParam = originLoc ? `&origin=${originLoc.lat},${originLoc.lng}` : '';
-    window.open(`https://www.google.com/maps/dir/?api=1${originParam}&destination=${pandal.lat},${pandal.lng}&travelmode=${mode}`, '_blank');
+  const handleRemovePandal = (id) => {
+    if (plannerTab !== 'manual') {
+      const currentPandals = optimizedRoute.filter(p => p.id !== 'END' && p.id !== '__START__' && p.id !== id);
+      setManualPandals(currentPandals);
+      setPlannerTab('manual');
+    } else {
+      setManualPandals(prev => prev.filter(p => p.id !== id));
+    }
   };
 
-  const pName = (p) => lang === 'en' ? (p.name_en || p.name) : (p.name_bn || p.name);
+  const handleOtherTime = async () => {
+    const { value } = await Swal.fire({
+      title: 'কত মিনিট সময় আছে?',
+      input: 'number',
+      inputAttributes: { min: 30, max: 720, step: 15 },
+      inputPlaceholder: '৩০ থেকে ৭২০ মিনিট',
+      showCancelButton: true,
+      confirmButtonText: 'ঠিক আছে',
+      cancelButtonText: 'বাতিল',
+      confirmButtonColor: '#8B1E3F',
+      cancelButtonColor: '#999',
+    });
+    if (value) {
+      const mins = parseInt(value, 10);
+      if (mins >= 30 && mins <= 720) {
+        setBudgetMin(null);
+        setTopN(null);
+        setPlannerTab(null);
+        setHasSelectedTime(false);
+        
+        setBudgetMin(mins);
+        setPlannerTab('budget');
+        setHasSelectedTime(true);
+        setHasUserInteracted(true);
+      }
+    }
+  };
 
-  if (!isMounted) return null; // Fix hydration mismatch by only rendering on client
+  const buildGmapsUrlForBatch = (batchIndex, liveOrigin, startingLoc, mode, state = batchState) => {
+    if (!state) return null;
+    const allBatches = state.batches;
+    const thisBatch = allBatches[batchIndex];
+    if (!thisBatch || thisBatch.length === 0) return null;
 
-    return (
+    const batchPandals = thisBatch
+      .map(id => optimizedRoute.find(p => p.id === id))
+      .filter(Boolean);
+    if (batchPandals.length === 0) return null;
+
+    // Origin: prefer the LIVE user location (GPS) passed in.
+    // If liveOrigin is null, fall back to the last pandal of the
+    // previous batch (best guess).
+    let batchOrigin = liveOrigin;
+    if (!batchOrigin) {
+      if (batchIndex === 0) return null;  // can't route without origin
+      const prevBatch = allBatches[batchIndex - 1];
+      const prevLastId = prevBatch[prevBatch.length - 1];
+      const prevLastPandal = optimizedRoute.find(p => p.id === prevLastId);
+      if (!prevLastPandal) return null;
+      batchOrigin = { lat: prevLastPandal.lat, lng: prevLastPandal.lng };
+    }
+
+    // Destination:
+    const isLastBatch = batchIndex === allBatches.length - 1;
+    let batchDestination;
+    if (isLastBatch) {
+      // Return to the user's original starting location
+      batchDestination = startingLoc || batchOrigin;
+    } else {
+      // End at the last pandal of this batch
+      const lastPandal = batchPandals[batchPandals.length - 1];
+      batchDestination = { lat: lastPandal.lat, lng: lastPandal.lng };
+    }
+
+    // Waypoints: all pandals except the destination
+    const wpPandals = isLastBatch
+      ? batchPandals
+      : batchPandals.slice(0, batchPandals.length - 1);
+    const wp = wpPandals.map(s => `${s.lat},${s.lng}`).join('|');
+
+    return `https://www.google.com/maps/dir/?api=1&origin=${batchOrigin.lat},${batchOrigin.lng}&destination=${batchDestination.lat},${batchDestination.lng}${wp ? '&waypoints=' + wp : ''}&travelmode=${mode}`;
+  };
+
+  const handleOpenGmaps = async () => {
+    const stops = optimizedRoute.filter(p => p.id !== 'END' && p.id !== '__START__');
+    if (stops.length === 0) return;
+
+    const originLoc = liveNavState?.userLocation || startLocation || { lat: stops[0].lat, lng: stops[0].lng };
+    const mode = transportMode === 'car' ? 'driving' : 'walking';
+    
+    if (stops.length <= 10) {
+      const wp = stops.map(s => `${s.lat},${s.lng}`).join('|');
+      const url = `https://www.google.com/maps/dir/?api=1&origin=${originLoc.lat},${originLoc.lng}&destination=${originLoc.lat},${originLoc.lng}${wp ? '&waypoints=' + wp : ''}&travelmode=${mode}`;
+      if (typeof window !== 'undefined') window.open(url, '_blank');
+      return;
+    } 
+
+    const stopIds = stops.map(s => s.id);
+    const batchSize = 10;
+    const batches = [];
+    for (let i = 0; i < stopIds.length; i += batchSize) {
+      batches.push(stopIds.slice(i, i + batchSize));
+    }
+    const sig = computeRouteSignature(stopIds);
+
+    if (batchState && batchState.routeSignature === sig && batchState.currentBatchIndex < batches.length) {
+      const liveOrigin = liveNavState?.userLocation || originLoc;
+      const startingLoc = batchState.startingLoc || originLoc;
+      const url = buildGmapsUrlForBatch(
+        batchState.currentBatchIndex,
+        liveOrigin,
+        startingLoc,
+        mode,
+        batchState
+      );
+      if (url && typeof window !== 'undefined') window.open(url, '_blank');
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: t('pl_more_than_10'),
+      icon: 'info',
+      showDenyButton: true,
+      showCancelButton: true,
+      confirmButtonText: t('pl_open_first_10'),
+      denyButtonText: t('pl_one_by_one'),
+      cancelButtonText: t('pl_cancel'),
+    });
+
+    if (result.isConfirmed) {
+      const record = {
+        routeSignature: sig,
+        batches,
+        currentBatchIndex: 0,
+        startingLoc: originLoc,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      await setBatchProgress(sig, record);
+      setBatchState(record);
+
+      const liveOrigin = liveNavState?.userLocation || originLoc;
+      const url = buildGmapsUrlForBatch(0, liveOrigin, originLoc, mode, record);
+      if (url && typeof window !== 'undefined') window.open(url, '_blank');
+    } else if (result.isDenied) {
+      liveNavState.startTour();
+    }
+  };
+
+  const handleBatchAdvance = async () => {
+    if (!batchState) return;
+    const nextIndex = batchState.currentBatchIndex + 1;
+    if (nextIndex >= batchState.batches.length) {
+      await clearBatchProgress(batchState.routeSignature);
+      setBatchState(null);
+      Swal.fire({
+        icon: 'success',
+        title: lang === 'en' ? 'All pandals visited!' : 'সব মণ্ডপ দেখা শেষ!',
+        text: lang === 'en' ? 'Hope you enjoyed the tour.' : 'আশা করি ভালো লেগেছে।',
+        timer: 3000,
+        showConfirmButton: false,
+      });
+    } else {
+      const updated = { ...batchState, currentBatchIndex: nextIndex, updatedAt: Date.now() };
+      await setBatchProgress(batchState.routeSignature, updated);
+      setBatchState(updated);
+      
+      const liveOrigin = liveNavState?.userLocation || null;
+      const startingLoc = batchState.startingLoc || null;
+      const mode = transportMode === 'car' ? 'driving' : 'walking';
+      
+      const url = buildGmapsUrlForBatch(nextIndex, liveOrigin, startingLoc, mode, updated);
+      if (url && typeof window !== 'undefined') window.open(url, '_blank');
+    }
+  };
+
+  const handleBatchCancel = async () => {
+    if (!batchState) return;
+    await clearBatchProgress(batchState.routeSignature);
+    setBatchState(null);
+  };
+
+  const handleShare = async () => {
+    const stops = optimizedRoute.filter(p => p.id !== 'END' && p.id !== '__START__');
+    const ids = stops.map(s => s.id).join(',');
+    const url = `${window.location.origin}/planner?stops=${ids}&mode=${transportMode}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: t('share_title'),
+          text: t('share_text', { n: stops.length }),
+          url,
+        });
+      } catch (err) {
+        // silently catch abort
+      }
+    } else {
+      navigator.clipboard.writeText(url);
+      Swal.fire({ toast: true, position: 'bottom', icon: 'success', title: t('share_copied'), showConfirmButton: false, timer: 2000 });
+    }
+  };
+
+  if (!isMounted) return null;
+
+  const renderSummaryAndChips = () => (
+    <div className="w-full">
+      {/* Summary Card */}
+      <button className="w-full text-left bg-white border-2 border-red-100 hover:border-red-200 rounded-2xl p-4 shadow-sm mt-4 transition-colors">
+         <div className="flex justify-between items-start mb-2">
+           <div className="text-xs text-gray-500 font-semibold"><span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {lang === 'en' ? 'From your location' : 'আপনার অবস্থান থেকে'}</span></div>
+           {optimizedRoute.length > 0 && (
+             <div className="text-[10px] text-red-700 font-bold bg-red-50 px-2 py-0.5 rounded-full">
+               {lang === 'en' ? 'Tap to view list' : 'তালিকা দেখতে ট্যাপ করুন'}
+             </div>
+           )}
+         </div>
+         <div className="flex items-center gap-4">
+           <div className="font-extrabold text-red-900 text-lg flex items-center gap-1.5">
+             <MapPin className="w-5 h-5 text-red-700" /> 
+             {optimizedRoute.length > 0 ? (lang === 'en' ? `${optimizedRoute.length - 1} pandals` : `${optimizedRoute.length - 1}টি মণ্ডপ`) : (lang === 'en' ? '0 pandals' : '0টি মণ্ডপ')}
+           </div>
+           <div className="font-extrabold text-amber-600 text-lg flex items-center gap-1.5">
+             <Clock className="w-5 h-5" /> 
+             ~{stats ? (lang === 'bn' ? formatDurationBn(stats.totalMin) : formatDuration(stats.totalMin, lang)) : '—'}
+           </div>
+         </div>
+      </button>
+
+      {/* Clear all */}
+      <div className="flex flex-col gap-1 pt-2">
+        {optimizedRoute.length > 0 && (
+          <div className="flex justify-end">
+            <button
+              onClick={() => {
+                setManualPandals([]);
+                setBudgetMin(null);
+                setTopN(null);
+                setHasSelectedTime(false);
+                setHasUserInteracted(false);
+                setPlannerTab('top');
+              }}
+              className="text-xs font-bold text-red-700 hover:text-red-900 underline"
+            >
+              {lang === 'en' ? 'Clear all' : 'সব মুছুন'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
     <section className="relative h-full w-full bg-stone-100 overflow-hidden">
       {(gpsPermission === 'denied' || (gpsError && gpsError.includes('denied'))) && (
         <div className="absolute top-0 left-0 right-0 z-[60] bg-red-600 text-white px-4 py-3 text-center text-sm shadow-md font-medium pt-6">
@@ -255,6 +525,7 @@ export default function PlannerSection() {
       {/* MAP */}
       <div className="absolute inset-0 z-0">
         <MapView
+          mode={liveNavState.isNavigating ? 'navigate' : (hasSelectedTime || isPickingFromMap) ? 'plan' : 'discover'}
           pandalsData={pandalsData}
           selectedRoute={optimizedRoute}
           onAddPandal={handleAddPandal}
@@ -266,25 +537,19 @@ export default function PlannerSection() {
           activeRouteLine={liveNavState.activeRouteLine}
           activePandal={liveNavState.activePandal}
           liveCounts={liveCounts}
+          onOpenPlanner={() => { setDrawerState('half'); setUiMode('main'); }}
+          drawerOpen={drawerState !== 'closed'}
+          drawerState={drawerState}
         />
         {liveNavState.isNavigating && (
           <LiveNavigationHUD navState={liveNavState} totalStops={optimizedRoute.length} />
         )}
       </div>
 
-      {/* Floating Toggle Button (Visible only when drawer is closed) */}
-      {drawerState === 'closed' && !liveNavState.isNavigating && (
-        <button 
-          onClick={() => setDrawerState('half')}
-          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-white rounded-full p-3 shadow-xl border border-gray-200 text-red-700 animate-bounce md:hidden"
-        >
-          <ChevronRight className="w-6 h-6 -rotate-90" />
-        </button>
-      )}
-
       {/* PLANNER DRAWER */}
       {!liveNavState.isNavigating && (
         <div 
+          id="planner-drawer"
           className={`absolute bottom-0 left-0 right-0 md:relative md:w-[420px] bg-white/97 backdrop-blur-2xl shadow-[0_-12px_48px_rgba(0,0,0,0.12)] z-10 flex flex-col rounded-t-[2rem] md:rounded-none transition-transform duration-300 ease-in-out ${
             drawerState === 'closed' ? 'translate-y-full' : 'translate-y-0'
           } ${
@@ -292,7 +557,7 @@ export default function PlannerSection() {
           } md:h-full`}
         >
 
-          {/* Mobile drag handle - acts as close button and swipe target */}
+          {/* Mobile drag handle */}
           <div 
             className="w-full flex justify-center pt-3 pb-4 md:hidden cursor-pointer touch-none"
             onClick={() => setDrawerState('closed')}
@@ -315,266 +580,289 @@ export default function PlannerSection() {
             {drawerState === 'expanded' ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
           </button>
 
-          <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-6 pt-2 space-y-4">
-
-            {/* Header */}
-            <div>
-              <h2 className="text-2xl font-extrabold text-red-900 leading-tight">{t('route_builder')}</h2>
-              <p className="text-xs text-gray-400 mt-0.5">{t('select_pandals')}</p>
-            </div>
-
-            {/* Transport Mode Selector */}
-            <div className="bg-gray-50 border border-gray-100 rounded-2xl p-3">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">{t('transport_mode')}</p>
-              <div className="flex gap-2">
-                {TRANSPORT_PILLS.map(({ key, Icon, label, labelEn }) => (
-                  <button
-                    key={key}
-                    onClick={() => setTransportMode(key)}
-                    className={`flex-1 flex flex-col items-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
-                      transportMode === key
-                        ? 'bg-red-700 text-white shadow-md shadow-red-200'
-                        : 'bg-white text-gray-500 border border-gray-200 hover:border-red-200 hover:text-red-600'
-                    }`}
+          {/* Batch Banner */}
+              {batchState && drawerState !== 'closed' && (
+                <div className="mx-5 mt-3 mb-2">
+                  <div
+                    onClick={() => {
+                      if (batchState.currentBatchIndex < batchState.batches.length - 1) {
+                        handleBatchAdvance();
+                      }
+                    }}
+                    className={`rounded-2xl p-3 flex items-start gap-3 ${
+                      batchState.currentBatchIndex >= batchState.batches.length - 1
+                        ? 'bg-blue-50 border border-blue-200'
+                        : 'bg-amber-50 border border-amber-200'
+                    } ${batchState.currentBatchIndex < batchState.batches.length - 1 ? 'cursor-pointer hover:bg-amber-100' : ''}`}
                   >
-                    <Icon className="w-4 h-4" strokeWidth={2} />
-                    {lang === 'en' ? labelEn : label}
-                  </button>
-                ))}
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-gray-900 leading-tight">
+                        {batchState.currentBatchIndex < batchState.batches.length - 1
+                          ? (lang === 'en'
+                              ? `Done with first ${batchState.batches[batchState.currentBatchIndex].length}? Tap for next batch`
+                              : `প্রথম ${batchState.batches[batchState.currentBatchIndex].length}টি শেষ? পরেরটির জন্য ক্লিক করুন`)
+                          : (lang === 'en'
+                              ? `Almost done — ${batchState.batches[batchState.currentBatchIndex].length} stops left`
+                              : `প্রায় শেষ — বাকি ${batchState.batches[batchState.currentBatchIndex].length}টি মণ্ডপ`)
+                        }
+                      </p>
+                      <p className="text-[11px] text-gray-500 mt-1">
+                        {lang === 'en'
+                          ? `Batch ${batchState.currentBatchIndex + 1} of ${batchState.batches.length}`
+                          : `ব্যাচ ${batchState.currentBatchIndex + 1} / ${batchState.batches.length}`}
+                      </p>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleBatchCancel();
+                      }}
+                      className="w-7 h-7 flex items-center justify-center rounded-full bg-white/60 hover:bg-white text-gray-600 shrink-0"
+                      aria-label="Cancel batch"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-6 pt-2 space-y-4">
+                
+                {/* Header */}
+              <div>
+                <h2 className="text-2xl font-extrabold text-red-900 leading-tight">{t('route_planner')}</h2>
               </div>
-            </div>
 
-            {/* Plan Mode Tabs */}
-            <div className="bg-gray-100 rounded-2xl p-1 flex gap-1">
-              {[
-                { id: 'top',    label: lang === 'en' ? 'Top Picks' : 'সেরা মণ্ডপ' },
-                { id: 'budget', label: lang === 'en' ? 'Time Budget' : 'সময় অনুযায়ী' },
-                { id: 'manual', label: lang === 'en' ? 'Custom' : 'নিজে বাছুন' },
-                { id: 'trends', label: 'ট্রেন্ডিং' },
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setPlannerTab(tab.id)}
-                  className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all duration-200 ${
-                    plannerTab === tab.id
-                      ? 'bg-white text-red-700 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* TOP-N Controls */}
-            {plannerTab === 'top' && (
-              <div className="flex gap-2">
-                {TOP_N_OPTIONS.map(({ n, Icon, label }) => (
-                  <button
-                    key={String(n)}
-                    onClick={() => setTopN(n)}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
-                      topN === n
-                        ? 'bg-amber-500 text-white shadow-md shadow-amber-200'
-                        : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    {typeof label === 'function' ? label(lang) : label}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* BUDGET Controls */}
-            {plannerTab === 'budget' && (
-              <div className="grid grid-cols-2 gap-2">
+              {/* Time Budget */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {BUDGET_OPTIONS.map(({ minutes, Icon, label, labelEn }) => (
                   <button
                     key={String(minutes)}
-                    onClick={() => setBudgetMin(minutes)}
-                    className={`flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold transition-all duration-200 ${
-                      budgetMin === minutes
+                    onClick={() => { 
+                      if (plannerTab === 'budget' && budgetMin === minutes) {
+                        setBudgetMin(null);
+                        setHasSelectedTime(false);
+                        if (manualPandals.length === 0) {
+                          setHasUserInteracted(false);
+                          setPlannerTab(null);
+                        }
+                      } else {
+                        setBudgetMin(minutes); 
+                        setPlannerTab('budget'); 
+                        setHasSelectedTime(true); 
+                        setHasUserInteracted(true); 
+                      }
+                    }}
+                    className={`flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl text-xs font-bold transition-all duration-200 ${
+                      plannerTab === 'budget' && budgetMin === minutes
                         ? 'bg-red-700 text-white shadow-md shadow-red-200'
                         : 'bg-red-50 text-red-700 border border-red-100 hover:bg-red-100'
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5" />
+                    <Icon className="w-5 h-5" />
                     {lang === 'en' ? labelEn : label}
                   </button>
                 ))}
+                <button
+                   onClick={handleOtherTime}
+                   className="col-span-2 md:col-span-4 py-2 mt-1 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors"
+                >
+                  {t('pl_time_other')}
+                </button>
               </div>
-            )}
 
-            {/* Trends Panel */}
-            {plannerTab === 'trends' && (
-              <TrendsPanel />
-            )}
-
-            {/* Trim Badge */}
-            {trimMessage && (
-              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-xs text-amber-800 font-medium">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
-                {trimMessage}
-              </div>
-            )}
-
-            {/* GPS Denied Banner */}
-            {liveNavState.gpsPermissionDenied && (
-              <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 text-xs text-red-800 font-medium">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
-                সঠিক লাইভ নেভিগেশনের জন্য জিপিএস অন করুন। বর্তমানে আপনি মণ্ডপ পরিক্রমার প্রিভিউ দেখছেন।
-              </div>
-            )}
-
-            {/* ETA Glassmorphic Card */}
-            {stats && (
-              <div className="bg-white/90 backdrop-blur-md shadow-lg border border-amber-200/60 rounded-2xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                    {isPreviewMode ? 'মণ্ডপ-টু-মণ্ডপ আনুমানিক সময় ও দূরত্ব (Preview Mode)' : 'মোট সময়'}
-                  </span>
-                  <span className="text-2xl font-extrabold text-red-800">
-                    {lang === 'bn' ? formatDurationBn(stats.totalMin) : formatDuration(stats.totalMin, lang)}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 pt-1">
-                  <div className="bg-blue-50 rounded-xl p-2 text-center">
-                    <Clock className="w-3.5 h-3.5 text-blue-400 mx-auto mb-1" />
-                    <p className="text-[10px] text-blue-400 font-semibold">রাস্তার সময়</p>
-                    <p className="text-sm font-bold text-blue-700">{formatDuration(stats.totalTravelMin, lang)}</p>
+              {/* More Options */}
+              <div className="bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden">
+                <button 
+                  onClick={() => setShowMoreOptions(!showMoreOptions)} 
+                  className="w-full flex items-center justify-between p-4 font-bold text-gray-700"
+                >
+                  <div className="flex items-center gap-2">
+                    <Settings2 className="w-4 h-4 text-gray-400" />
+                    {t('pl_more_options')}
                   </div>
-                  <div className="bg-green-50 rounded-xl p-2 text-center">
-                    <Eye className="w-3.5 h-3.5 text-green-400 mx-auto mb-1" />
-                    <p className="text-[10px] text-green-400 font-semibold">ঠাকুর দেখা</p>
-                    <p className="text-sm font-bold text-green-700">{formatDuration(stats.totalDwellMin, lang)}</p>
-                  </div>
-                  <div className="bg-purple-50 rounded-xl p-2 text-center">
-                    <Ruler className="w-3.5 h-3.5 text-purple-400 mx-auto mb-1" />
-                    <p className="text-[10px] text-purple-400 font-semibold">মোট দূরত্ব</p>
-                    <p className="text-sm font-bold text-purple-700">{stats.totalDistKm} কিমি</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Clear All Button for Manual Tab */}
-            {plannerTab === 'manual' && manualPandals.length > 0 && (
-              <button
-                onClick={() => setManualPandals([])}
-                className="w-full text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl py-2 mb-2 transition-colors"
-              >
-                {lang === 'en' ? 'Clear All' : 'সব মুছুন'}
-              </button>
-            )}
-
-            {/* Timeline Itinerary */}
-            {stats?.legs?.length > 0 && (
-              <div className="space-y-0">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">পরিক্রমার তালিকা</p>
-                {stats.legs.map((leg, idx) => (
-                  <div key={leg.pandal.id ?? idx} className="flex gap-3">
-                    <div className="flex flex-col items-center">
-                      <div className="w-7 h-7 bg-red-700 text-white rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 shadow">{idx + 1}</div>
-                      {idx < stats.legs.length - 1 && <div className="w-0.5 flex-1 bg-red-100 my-1 min-h-[12px]" />}
-                    </div>
-                    <div className="flex-1 pb-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-bold text-gray-900 text-sm leading-tight">{pName(leg.pandal)}</h4>
-                          <p className="text-[11px] text-gray-400 mt-0.5">{leg.pandal.zone}</p>
-                        </div>
-                        <div className="text-right shrink-0 ml-2">
-                          <p className="text-[11px] font-bold text-red-700">{getArrivalTime(leg.cumMinutes - leg.dwellMin, lang)}</p>
-                          <p className="text-[10px] text-gray-400">{leg.travelMin} মিনিট</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <span className="text-[10px] bg-green-50 text-green-700 border border-green-100 rounded-lg px-2 py-0.5 font-semibold flex items-center gap-1">
-                          <Eye className="w-2.5 h-2.5" />{leg.dwellMin} মিনিট
-                        </span>
-                        <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-100 rounded-lg px-2 py-0.5 font-semibold flex items-center gap-1">
-                          <Ruler className="w-2.5 h-2.5" />{leg.distKm} কিমি
-                        </span>
-                        <button onClick={() => handleSingleDirection(leg.pandal)} className="ml-auto p-1.5 bg-gray-50 text-gray-400 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors">
-                          <Navigation className="w-3 h-3" />
-                        </button>
-                        {plannerTab === 'manual' && (
-                          <button onClick={() => handleRemovePandal(leg.pandal.id)} className="p-1.5 text-gray-300 hover:bg-red-50 hover:text-red-500 rounded-lg transition-colors">
-                            <X className="w-3 h-3" />
+                  {showMoreOptions ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                </button>
+                
+                {showMoreOptions && (
+                  <div className="px-4 pb-4 space-y-4 border-t border-gray-100 pt-4">
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Top N</p>
+                      <div className="flex gap-2">
+                        {TOP_N_OPTIONS.map(({ n, Icon, label }) => (
+                          <button
+                            key={String(n)}
+                            onClick={() => { 
+                              if (plannerTab === 'top' && topN === n) {
+                                setTopN(null);
+                                setHasSelectedTime(false);
+                                if (manualPandals.length === 0) {
+                                  setHasUserInteracted(false);
+                                  setPlannerTab(null);
+                                }
+                              } else {
+                                setTopN(n); 
+                                setPlannerTab('top'); 
+                                setHasSelectedTime(true); 
+                                setHasUserInteracted(true); 
+                              }
+                            }}
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+                              plannerTab === 'top' && topN === n
+                                ? 'bg-amber-500 text-white shadow-md'
+                                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                            }`}
+                          >
+                            <Icon className="w-3.5 h-3.5" />
+                            {typeof label === 'function' ? label(lang) : label}
                           </button>
-                        )}
+                        ))}
                       </div>
                     </div>
+
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">{t('transport_mode')}</p>
+                      <div className="flex gap-2">
+                        {TRANSPORT_PILLS.map(({ key, Icon, label, labelEn }) => (
+                          <button
+                            key={key}
+                            onClick={() => setTransportMode(key)}
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+                              transportMode === key
+                                ? 'bg-red-700 text-white shadow-md'
+                                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                            }`}
+                          >
+                            <Icon className="w-4 h-4" />
+                            {lang === 'en' ? labelEn : label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        if (plannerTab === 'top' || plannerTab === 'budget') {
+                          setManualPandals([]);
+                          setTopN(null);
+                          setBudgetMin(null);
+                          setHasSelectedTime(false);
+                        }
+                        setUiMode('map_pick');
+                        setPlannerTab('manual');
+                        setDrawerState('closed');
+                        setIsPickingFromMap(true);
+                        setHasUserInteracted(true);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 py-3 bg-gray-800 text-white rounded-xl text-sm font-bold shadow-md hover:bg-gray-900 transition-colors"
+                    >
+                      <MapPin className="w-4 h-4" />
+                      {t('pl_select_from_map')} →
+                    </button>
                   </div>
-                ))}
-                {/* End node */}
-                <div className="flex gap-3">
-                  <div className="w-7 h-7 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center shrink-0">
-                    <Flag className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="flex-1 flex items-center">
-                    <span className="text-sm font-bold text-gray-400">শুরুর স্থানে ফিরুন</span>
-                  </div>
+                )}
+              </div>
+
+              {/* Summary Card & Actions Gated by Selection */}
+              {!(hasSelectedTime || manualPandals.length > 0 || optimizedRoute.length > 0) ? (
+                <div className="mt-4 p-6 border-2 border-dashed border-gray-200 rounded-2xl text-center bg-gray-50 flex items-center justify-center h-48">
+                  <p className="text-gray-500 font-medium text-sm">সময় বেছে নিন — আমরা সেরা রুট বানিয়ে দেব</p>
                 </div>
-              </div>
-            )}
+              ) : (
+                <>
+                  {renderSummaryAndChips()}
 
-            {/* Empty state */}
-            {(!plannerTab || (plannerTab === 'manual' && manualPandals.length === 0)) && (
-              <div className="text-center py-8 px-4 bg-gray-50 rounded-2xl border border-dashed border-gray-300">
-                <MapPin className="w-8 h-8 text-gray-400 mx-auto mb-3 opacity-50" />
-                <p className="text-gray-500 font-medium text-sm">ম্যাপ থেকে মণ্ডপ নির্বাচন করুন অথবা ওপরের ফিল্টার বেছে নিন</p>
-              </div>
-            )}
+                  {/* Primary Actions */}
+                  <div className="space-y-3 pt-2">
+                    <button
+                      onClick={() => {
+                        if (typeof navigator === 'undefined' || !navigator.geolocation) {
+                          Swal.fire({ icon: 'error', title: 'অসমর্থিত ডিভাইস', text: 'আপনার ডিভাইসে লোকেশন সার্ভিস সাপোর্ট করছে না।' });
+                          return;
+                        }
+                        if (startLocation === null) {
+                          retryGPS();
+                        } else if (optimizedRoute.length > 0) {
+                          if (window.speechSynthesis) window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+                          liveNavState.startTour();
+                        }
+                      }}
+                      disabled={startLocation !== null && optimizedRoute.length <= 1}
+                      className="w-full py-4 bg-gradient-to-r from-red-700 to-red-900 text-white rounded-2xl font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                      {startLocation === null ? (
+                        <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {lang === 'en' ? 'Enable GPS' : 'জিপিএস অন করুন'}</span>
+                      ) : (
+                        <><Play className="w-5 h-5 fill-white" /> {t('pl_start_tour')}</>
+                      )}
+                    </button>
 
-            {/* Start Button */}
-            {startLocation === null ? (
-              <button
-                onClick={() => {
-                  if (typeof navigator === 'undefined' || !navigator.geolocation) {
-                    Swal.fire({
-                       icon: 'error',
-                       title: 'অসমর্থিত ডিভাইস',
-                       text: 'আপনার ডিভাইসে লোকেশন সার্ভিস সাপোর্ট করছে না।',
-                       confirmButtonColor: '#991b1b',
-                       confirmButtonText: 'ঠিক আছে'
-                    });
-                    return;
-                  }
-                  retryGPS();
-                }}
-                className="w-full py-4 bg-white text-gray-700 border-2 border-gray-300 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-50"
-              >
-                <MapPin className="w-5 h-5 text-gray-600" />
-                📍 জিপিএস অন করুন
-              </button>
-            ) : optimizedRoute.length > 0 ? (
-              <button
-                onClick={() => {
-                  if (typeof window !== 'undefined' && window.speechSynthesis) {
-                    window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
-                  }
-                  liveNavState.startTour();
-                }}
-                className="w-full py-4 bg-gradient-to-r from-red-700 to-red-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <Play className="w-5 h-5 fill-white" />
-                পরিক্রমা শুরু করুন — {optimizedRoute.length - 1} {lang === 'en' ? 'stops' : 'মণ্ডপ'}
-              </button>
-            ) : (
-              <button
-                disabled
-                className="w-full py-4 bg-gray-100 text-gray-400 border-2 border-gray-200 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all cursor-not-allowed"
-              >
-                ম্যাপ থেকে মণ্ডপ নির্বাচন করুন
-              </button>
-            )}
+                    {optimizedRoute.length > 1 && (
+                      <button
+                        onClick={handleOpenGmaps}
+                        className="w-full py-3 bg-white text-blue-600 border-2 border-blue-100 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-blue-50 transition-all"
+                      >
+                        <ExternalLink className="w-5 h-5" />
+                        {t('pl_open_gmaps')}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Share */}
+                  {optimizedRoute.length > 1 && (
+                    <button
+                      onClick={handleShare}
+                      className="w-full py-2 bg-transparent text-gray-500 font-bold flex items-center justify-center gap-2 hover:text-gray-700 transition-colors mt-2"
+                    >
+                      <Share className="w-4 h-4" />
+                      {t('pl_share')}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+        </div>
+      )}
+
+      {isPickingFromMap && (
+        <div className="absolute bottom-0 left-0 right-0 z-10 bg-white rounded-t-2xl shadow-2xl p-4 md:max-w-md md:left-1/2 md:-translate-x-1/2">
+          {/* Count row */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 text-red-800">
+              <Target className="w-4 h-4" />
+              <span className="font-bold text-sm">
+                {lang === 'en'
+                  ? `${manualPandals.length} pandals selected`
+                  : `${manualPandals.length}টি মণ্ডপ বেছেছেন`}
+              </span>
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setManualPandals([]);
+                setIsPickingFromMap(false);
+                setDrawerState('half');
+              }}
+              className="flex-1 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-bold text-sm"
+            >
+              {lang === 'en' ? 'Cancel' : 'বাতিল'}
+            </button>
+            <button
+              onClick={() => {
+                setIsPickingFromMap(false);
+                setDrawerState('half');
+              }}
+              disabled={manualPandals.length === 0}
+              className="flex-1 py-3 bg-red-700 text-white rounded-xl font-bold text-sm disabled:opacity-50"
+            >
+              {lang === 'en' ? 'Done' : 'সম্পূর্ণ করুন'}
+            </button>
           </div>
         </div>
       )}
     </section>
   );
 }
-
-

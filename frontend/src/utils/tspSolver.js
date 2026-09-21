@@ -196,6 +196,13 @@ export function solveBudget(startNode, pandals, budgetMin, mode) {
     }
   }
 
+  console.log('[solveBudget] budget:', budgetMin,
+              'selected:', selected.length,
+              'totalMin:', Math.round(totalMin),
+              'dwells:', selected.slice(0, 5).map(p =>
+                p.visit?.dwellMinutes || p.dwellMinutes || 20
+              ));
+
   const optimizedNodes = optimizeRouteTSP([startNode, ...selected]);
   const finalSelected = optimizedNodes.slice(1);
   

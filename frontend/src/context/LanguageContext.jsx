@@ -101,7 +101,34 @@ const translations = {
     feedback_submit: "পাঠান",
     feedback_cancel: "বাতিল",
     feedback_thanks: "ধন্যবাদ! আপনার মতামত আমরা পেয়েছি।",
-    feedback_error: "দুঃখিত, পাঠানো যায়নি। আবার চেষ্টা করুন।"
+    feedback_error: "দুঃখিত, পাঠানো যায়নি। আবার চেষ্টা করুন।",
+    
+    // Planner Phase 9B
+    pl_time_label: "কত সময় আছে?",
+    pl_time_2h: "২ ঘণ্টা",
+    pl_time_4h: "৪ ঘণ্টা",
+    pl_time_6h: "৬ ঘণ্টা",
+    pl_time_allday: "সারা দিন",
+    pl_time_other: "অন্যান্য",
+    pl_more_options: "আরও বিকল্প",
+    pl_start_tour: "পরিক্রমা শুরু করুন",
+    pl_open_gmaps: "Google Maps-এ খুলুন",
+    pl_share: "শেয়ার",
+    pl_select_from_map: "ম্যাপ থেকে বাছুন",
+    pl_selected_count: "{n}টি মণ্ডপ বেছেছেন",
+    pl_confirm: "সম্পূর্ণ করুন",
+    pl_cancel: "বাতিল",
+    pl_open_first_10: "প্রথম ১০টি দিয়ে শুরু করুন",
+    pl_one_by_one: "একটা একটা করে যান",
+    pl_more_than_10: "১০টির বেশি মণ্ডপ Google Maps-এ একসাথে দেখানো যাবে না।",
+    pl_continue_batch: "প্রথম ১০টি শেষ? পরের {n}টির জন্য ক্লিক করুন",
+    share_title: "আমার পূজো পরিক্রমার রুট",
+    share_text: "চলো পূজো দেখতে যাই! {n}টি মণ্ডপ",
+    share_copied: "লিংক কপি হয়েছে",
+    search_pandals: "মণ্ডপ খুঁজুন...",
+    batch_progress: "ব্যাচ {n} / {total}",
+    batch_continue: "পরেরটির জন্য ক্লিক করুন",
+    batch_done_toast: "সব মণ্ডপ দেখা শেষ!"
   },
   en: {
     // Navbar
@@ -201,7 +228,34 @@ const translations = {
     feedback_submit: "Submit",
     feedback_cancel: "Cancel",
     feedback_thanks: "Thanks! We received your feedback.",
-    feedback_error: "Sorry, submission failed. Please try again."
+    feedback_error: "Sorry, submission failed. Please try again.",
+    
+    // Planner Phase 9B
+    pl_time_label: "How much time?",
+    pl_time_2h: "2 hours",
+    pl_time_4h: "4 hours",
+    pl_time_6h: "6 hours",
+    pl_time_allday: "All day",
+    pl_time_other: "Other",
+    pl_more_options: "More options",
+    pl_start_tour: "Start Tour",
+    pl_open_gmaps: "Open in Google Maps",
+    pl_share: "Share",
+    pl_select_from_map: "Pick from map",
+    pl_selected_count: "{n} pandals selected",
+    pl_confirm: "Confirm",
+    pl_cancel: "Cancel",
+    pl_open_first_10: "Start with first 10",
+    pl_one_by_one: "One by one",
+    pl_more_than_10: "Google Maps allows max 10 stops at once.",
+    pl_continue_batch: "First 10 done? Tap for next {n}",
+    share_title: "My Cholo Pujo route",
+    share_text: "Cholo Pujo! {n} pandals",
+    share_copied: "Link copied",
+    search_pandals: "Search pandals...",
+    batch_progress: "Batch {n} of {total}",
+    batch_continue: "Tap for next batch",
+    batch_done_toast: "All pandals visited!"
   },
   bng: {
     // Navbar
@@ -283,7 +337,34 @@ const translations = {
     foot_desc: "Bardhaman-er utsob-premi manusder jonno toiri ekti sompurno free o open-source project. Ashun sobai mile ek sundor, sushrinkhol o jam-mukt pujo upobhog kori.",
     foot_emergency: "Emergency Helpline",
     foot_police: "Bardhaman Police Control",
-    foot_hospital: "Bardhaman Medical College Hospital"
+    foot_hospital: "Bardhaman Medical College Hospital",
+    
+    // Planner Phase 9B
+    pl_time_label: "Koto somoy ache?",
+    pl_time_2h: "2 ghonta",
+    pl_time_4h: "4 ghonta",
+    pl_time_6h: "6 ghonta",
+    pl_time_allday: "Sara din",
+    pl_time_other: "Onnanno",
+    pl_more_options: "Aro bikolpo",
+    pl_start_tour: "Parikrama suru korun",
+    pl_open_gmaps: "Google Maps-e khulun",
+    pl_share: "Share",
+    pl_select_from_map: "Map theke bachun",
+    pl_selected_count: "{n}ti mondop bechhechen",
+    pl_confirm: "Sompurno korun",
+    pl_cancel: "Batil",
+    pl_open_first_10: "Prothom 10 diye suru korun",
+    pl_one_by_one: "Ekta ekta kore jaan",
+    pl_more_than_10: "10 tir beshi mondop Google Maps-e ekshathe dekhano jabe na.",
+    pl_continue_batch: "Prothom 10 shesh? Porer {n}tir jonno click korun",
+    share_title: "Amar pujo parikramar route",
+    share_text: "Cholo pujo dekhte jai! {n}ti mondop",
+    share_copied: "Link copy hoyeche",
+    search_pandals: "Mondop khujun...",
+    batch_progress: "Batch {n} / {total}",
+    batch_continue: "Porer tir jonno click korun",
+    batch_done_toast: "Sob mondop dekha shesh!"
   }
 };
 

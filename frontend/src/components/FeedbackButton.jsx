@@ -62,7 +62,7 @@ export default function FeedbackButton() {
         onClick={handleClick}
         onMouseEnter={handleMouseEnter}
         aria-label={t('feedback_button_aria')}
-        className={`fixed right-3 md:right-6 top-1/2 -translate-y-1/2 w-12 h-12 bg-red-800 hover:bg-red-900 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl z-40 transition-transform duration-300 ease-out ${!isFullyVisible && !isModalOpen ? 'translate-x-[80%]' : 'translate-x-0'}`}
+        className={`fixed right-3 md:right-6 top-[calc(50%-80px)] -translate-y-1/2 w-12 h-12 bg-red-800 hover:bg-red-900 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl z-40 transition-transform duration-300 ease-out ${!isFullyVisible && !isModalOpen ? 'translate-x-[80%]' : 'translate-x-0'}`}
       >
         <MessageCircle className="w-6 h-6" />
       </button>

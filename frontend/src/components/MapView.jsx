@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, Tooltip, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { MapPin, Navigation, Star, Zap, Users, CheckCircle, MessageSquarePlus, AlertTriangle } from 'lucide-react';
+import { MapPin, Navigation, Star, Zap, Users, CheckCircle, MessageSquarePlus, AlertTriangle, Route, Search, ChevronUp } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import ReviewModal from './ReviewModal';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
@@ -56,6 +56,17 @@ function ZoomTracker({ onZoom }) {
   useMapEvents({
     zoomend: (e) => onZoom(e.target.getZoom()),
   });
+  return null;
+}
+
+// Fly To Component
+function FlyToController({ target }) {
+  const map = useMap();
+  useEffect(() => {
+    if (target) {
+      map.flyTo(target, 17);
+    }
+  }, [target, map]);
   return null;
 }
 
@@ -111,31 +122,6 @@ function AutoCenterMap({ position, isNavigating, userLocation, selectedRoute, is
   return null;
 }
 
-// Locate Me Component
-function LocateMeButton({ userLocation }) {
-  const map = useMap();
-  
-  if (!userLocation) return null;
-  
-  return (
-    <div className="leaflet-bottom leaflet-right mb-24 mr-4 pointer-events-auto">
-      <div className="leaflet-control leaflet-bar border-none shadow-xl rounded-full bg-white overflow-hidden">
-        <button 
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            map.setView([userLocation.lat, userLocation.lng], 16, { animate: true });
-          }}
-          className="w-12 h-12 flex items-center justify-center bg-white text-blue-600 hover:bg-blue-50 transition-colors pointer-events-auto"
-          title="Locate Me"
-        >
-          <Navigation className="w-5 h-5" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export default function MapView({ 
   pandalsData = [], 
   selectedRoute = [], 
@@ -147,8 +133,28 @@ export default function MapView({
   routeData = null,
   activeRouteLine = null,
   activePandal = null,
-  liveCounts = {}
+  liveCounts = {},
+  onOpenPlanner,
+  drawerOpen = false,
+  drawerState = 'closed',
+  mode = 'discover'
 }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [flyToTarget, setFlyToTarget] = useState(null);
+
+  const computeResults = (query) => {
+    if (!query || query.length < 2) return [];
+    const q = query.toLowerCase();
+    return pandalsData
+      .filter(p =>
+        (p.name || '').toLowerCase().includes(q) ||
+        (p.name_en || '').toLowerCase().includes(q) ||
+        (p.name_bn || '').toLowerCase().includes(q)
+      )
+      .slice(0, 5);
+  };
   const userLat = userLocation?.lat;
   const userLng = userLocation?.lng;
 
@@ -182,6 +188,33 @@ export default function MapView({
   const osrmPolyline = activeRouteLine 
     ? activeRouteLine.map(c => [c[1], c[0]])
     : routeData?.geometry?.coordinates?.map(c => [c[1], c[0]]) || [];
+
+  const previewPolyline = useMemo(() => {
+    if (isNavigating) return null;
+    if (mode !== 'plan') return null;
+    if (!selectedRoute || selectedRoute.length < 2) return null;
+
+    const coords = [];
+
+    // Start at user location
+    if (userLocation) {
+      coords.push([userLocation.lat, userLocation.lng]);
+    }
+
+    // Add each pandal in order
+    selectedRoute.forEach(p => {
+      if (p && p.id !== '__START__' && p.id !== 'END' && p.lat !== undefined && p.lng !== undefined) {
+        coords.push([p.lat, p.lng]);
+      }
+    });
+
+    // Return to start
+    if (userLocation) {
+      coords.push([userLocation.lat, userLocation.lng]);
+    }
+
+    return coords.length >= 2 ? coords : null;
+  }, [isNavigating, mode, selectedRoute, userLocation]);
 
   const handleCheckIn = useCallback(async (pandal) => {
     // Geofence check
@@ -244,12 +277,50 @@ export default function MapView({
   }, [isNavigating]);
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-screen bg-gray-50 overflow-hidden">
+      {!isNavigating && (
+        <div className="absolute top-4 left-16 right-4 z-[999] max-w-md">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setSearchResults(computeResults(e.target.value));
+              }}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+              placeholder={t('search_pandals')}
+              className="w-full h-[44px] pl-10 pr-4 bg-white rounded-[12px] shadow-md text-[15px] outline-none border border-gray-100 text-gray-900 placeholder:text-gray-500"
+            />
+          </div>
+          {searchResults.length > 0 && isSearchFocused && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-[12px] shadow-md overflow-hidden max-h-60 overflow-y-auto">
+              {searchResults.map((pandal) => (
+                <button
+                  key={pandal.id}
+                  onClick={() => {
+                    setFlyToTarget([pandal.lat, pandal.lng]);
+                    setSearchQuery('');
+                    setSearchResults([]);
+                    setIsSearchFocused(false);
+                  }}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-0 flex flex-col"
+                >
+                  <span className="font-semibold text-gray-800 text-[15px]">{pandal.name}</span>
+                  {pandal.zone && <span className="text-xs text-gray-500">{pandal.zone}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <MapContainer 
         center={mapCenter} 
         zoom={mapZoom} 
         maxZoom={19}
-        zoomControl={!isNavigating}
+        zoomControl={false}
         style={{ height: '100%', width: '100%' }}
         className="z-0"
       >
@@ -260,7 +331,9 @@ export default function MapView({
           maxZoom={22}
         />
         
+        {/* Helper Components */}
         <ZoomTracker onZoom={setCurrentZoom} />
+        <FlyToController target={flyToTarget} />
 
         <AutoCenterMap 
           position={stablePosition} 
@@ -270,7 +343,7 @@ export default function MapView({
           isUserPanning={isUserPanning}
           setIsUserPanning={setIsUserPanning}
         />
-        <LocateMeButton userLocation={userLocation} />
+
 
         {userLocation && (
           <Marker 
@@ -305,6 +378,21 @@ export default function MapView({
               </div>
             )}
           </>
+        )}
+
+        {previewPolyline && (
+          <Polyline
+            positions={previewPolyline}
+            pathOptions={{
+              color: '#8B1E3F',
+              weight: 3,
+              opacity: 0.5,
+              dashArray: '6, 8',
+              lineCap: 'round',
+              lineJoin: 'round',
+              interactive: false,
+            }}
+          />
         )}
 
         {pandalsData.map((pandal) => {
@@ -357,32 +445,66 @@ export default function MapView({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-xs mb-1">
-                      <button 
-                        onClick={() => handleCheckIn(pandal)}
-                        className="bg-stone-100 hover:bg-green-50 hover:text-green-700 text-stone-700 border border-stone-200 py-1.5 rounded-md font-semibold flex items-center justify-center gap-1 transition-colors"
-                      >
-                        <CheckCircle className="w-3.5 h-3.5" /> {checkInText}
-                      </button>
-                      <button 
-                        onClick={() => setReviewPandal(pandal)}
-                        className="bg-stone-100 hover:bg-amber-50 hover:text-amber-700 text-stone-700 border border-stone-200 py-1.5 rounded-md font-semibold flex items-center justify-center gap-1 transition-colors"
-                      >
-                        <MessageSquarePlus className="w-3.5 h-3.5" /> টিপস দিন
-                      </button>
-                    </div>
+                    <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-gray-100">
+                      {mode === 'discover' && (
+                        <button 
+                          onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${pandal.lat},${pandal.lng}`, '_blank')}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md font-bold flex items-center justify-center gap-1 transition-colors shadow-sm"
+                        >
+                          <span className="flex items-center gap-1"><Navigation className="w-4 h-4" /> এখানে যান</span>
+                        </button>
+                      )}
+                      
+                      {mode === 'plan' && (
+                        <>
+                          <button 
+                            onClick={() => isAdded && onRemovePandal ? onRemovePandal(pandal.id) : onAddPandal(pandal)}
+                            className={`w-full py-2 rounded-md font-bold flex items-center justify-center gap-1 transition-all ${
+                              isAdded 
+                                ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100' 
+                                : 'bg-red-800 hover:bg-red-900 text-white'
+                            } shadow-sm`}
+                          >
+                            {isAdded ? '- তালিকা থেকে বাদ দিন' : '+ রুটে যোগ করুন'}
+                          </button>
+                          <button 
+                            onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${pandal.lat},${pandal.lng}`, '_blank')}
+                            className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 py-1.5 rounded-md font-semibold flex items-center justify-center gap-1 transition-colors"
+                          >
+                            <span className="flex items-center gap-1"><Navigation className="w-4 h-4" /> এখানে যান</span>
+                          </button>
+                        </>
+                      )}
 
-                    <div className="mt-1 pt-2 border-t border-gray-100">
-                      <button 
-                        onClick={() => isAdded && onRemovePandal ? onRemovePandal(pandal.id) : onAddPandal(pandal)}
-                        className={`w-full py-1.5 rounded-md font-bold text-sm flex items-center justify-center gap-1 transition-all ${
-                          isAdded 
-                            ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 shadow-sm' 
-                            : 'bg-red-800 hover:bg-red-900 text-white shadow-sm'
-                        }`}
-                      >
-                        {isAdded ? (lang === 'en' ? 'Remove from Route' : 'তালিকা থেকে বাদ দিন') : (lang === 'en' ? 'Add to Route' : 'তালিকায় যোগ করুন')}
-                      </button>
+                      {mode === 'navigate' && (
+                        <>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button 
+                              onClick={() => handleCheckIn(pandal)}
+                              disabled={distMeters > 120}
+                              className={`py-1.5 rounded-md font-semibold flex items-center justify-center gap-1 transition-colors ${
+                                distMeters > 120 
+                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed text-[10px] leading-tight px-1' 
+                                  : 'bg-stone-100 hover:bg-green-50 hover:text-green-700 text-stone-700 border border-stone-200 text-xs'
+                              }`}
+                            >
+                              <CheckCircle className="w-3.5 h-3.5 shrink-0" /> {distMeters > 120 ? 'নিকটে গেলে চেক-ইন করতে পারবেন' : 'চেক-ইন'}
+                            </button>
+                            <button 
+                              onClick={() => setReviewPandal(pandal)}
+                              className="bg-stone-100 hover:bg-amber-50 hover:text-amber-700 text-stone-700 border border-stone-200 py-1.5 rounded-md font-semibold flex items-center justify-center gap-1 transition-colors text-xs"
+                            >
+                              <MessageSquarePlus className="w-3.5 h-3.5" /> টিপস দিন
+                            </button>
+                          </div>
+                          <button 
+                            onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${pandal.lat},${pandal.lng}`, '_blank')}
+                            className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 py-1.5 rounded-md font-semibold flex items-center justify-center gap-1 transition-colors mt-1"
+                          >
+                            <span className="flex items-center gap-1"><Navigation className="w-4 h-4" /> এখানে যান</span>
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </Popup>
@@ -393,14 +515,19 @@ export default function MapView({
 
       </MapContainer>
 
-      {isUserPanning && isNavigating && (
+      {isUserPanning && userLocation && (
         <button
-          onClick={() => setIsUserPanning(false)}
-          className="absolute right-4 z-[1000] w-12 h-12 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl transition-all duration-300"
+          onClick={() => {
+            setIsUserPanning(false);
+            if (!isNavigating) {
+              setFlyToTarget([userLocation.lat, userLocation.lng]);
+            }
+          }}
+          className="absolute right-4 z-[1000] flex items-center justify-center bg-[#8B1E3F] hover:bg-[#701830] text-white rounded-full shadow-[0_4px_12px_rgba(139,30,63,0.35)] w-12 h-12 transition-all duration-300"
           style={{
-            bottom: hudHeight > 0
-              ? `${hudHeight + 16}px`
-              : '50vh'
+            bottom: isNavigating
+              ? (hudHeight > 0 ? `${hudHeight + 16}px` : '50vh')
+              : (drawerOpen ? 'calc(45vh + 16px)' : '96px')
           }}
           aria-label="Re-centre"
           title="Re-centre"
@@ -415,6 +542,16 @@ export default function MapView({
           pandalName={lang === 'en' ? reviewPandal.name_en || reviewPandal.name : reviewPandal.name_bn || reviewPandal.name}
           onClose={() => setReviewPandal(null)} 
         />
+      )}
+
+      {!isNavigating && !drawerOpen && onOpenPlanner && (
+        <button
+          onClick={onOpenPlanner}
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] flex items-center justify-center bg-[#8B1E3F] hover:bg-[#701830] text-white rounded-full shadow-[0_4px_12px_rgba(139,30,63,0.35)] w-12 h-12 transition-all duration-300 pointer-events-auto"
+          aria-label={t('pl_open_planner') || "Open planner"}
+        >
+          <ChevronUp className="w-6 h-6 text-white" />
+        </button>
       )}
     </div>
   );
