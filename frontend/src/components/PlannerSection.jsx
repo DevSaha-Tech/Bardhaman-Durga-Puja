@@ -6,7 +6,7 @@ import {
   MapPin, Play, Navigation, X, AlertCircle, List, Compass,
   Footprints, Bike, Car, Trophy, Star, Timer, Infinity as InfinityIcon,
   Clock, Eye, Ruler, Flag, ChevronRight, Moon, ChevronDown, ChevronUp,
-  Settings2, Share, ExternalLink, Zap, Target
+  Settings2, Share, ExternalLink, Zap, Target, PlusCircle
 } from 'lucide-react';
 import {
   solveTsp, filterTopN, solveBudget, calcItinerary,
@@ -26,6 +26,7 @@ function formatDurationBn(totalMinutes) {
 
 import { useLiveNavigator } from '../hooks/useLiveNavigator';
 import LiveNavigationHUD from './LiveNavigationHUD';
+import PandalListModal from './PandalListModal';
 import { useLanguage } from '@/context/LanguageContext';
 import Swal from 'sweetalert2';
 import {
@@ -94,6 +95,7 @@ export default function PlannerSection() {
   const [isPickingFromMap, setIsPickingFromMap] = useState(false);
   const [uiMode, setUiMode] = useState('main'); // 'main' or 'map_pick'
   const [showMoreOptions, setShowMoreOptions] = useState(false);
+  const [isListModalOpen, setIsListModalOpen] = useState(false);
   
   const [batchState, setBatchState] = useState(null);
 
@@ -158,6 +160,7 @@ export default function PlannerSection() {
                 manualPandals: selected,
                 transportMode: modeParam || 'walking'
               });
+              setHasUserInteracted(true);
               window.history.replaceState({}, document.title, window.location.pathname);
             }
           }
@@ -464,10 +467,13 @@ export default function PlannerSection() {
   const renderSummaryAndChips = () => (
     <div className="w-full">
       {/* Summary Card */}
-      <button className="w-full text-left bg-white border-2 border-red-100 hover:border-red-200 rounded-2xl p-4 shadow-sm mt-4 transition-colors">
+      <button 
+        onClick={() => setIsListModalOpen(true)}
+        className="w-full text-left bg-white border-2 border-red-100 hover:border-red-200 rounded-2xl p-4 shadow-sm mt-4 transition-colors"
+      >
          <div className="flex justify-between items-start mb-2">
            <div className="text-xs text-gray-500 font-semibold"><span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {lang === 'en' ? 'From your location' : 'আপনার অবস্থান থেকে'}</span></div>
-           {optimizedRoute.length > 0 && (
+           {optimizedRoute.length > 1 && (
              <div className="text-[10px] text-red-700 font-bold bg-red-50 px-2 py-0.5 rounded-full">
                {lang === 'en' ? 'Tap to view list' : 'তালিকা দেখতে ট্যাপ করুন'}
              </div>
@@ -476,12 +482,14 @@ export default function PlannerSection() {
          <div className="flex items-center gap-4">
            <div className="font-extrabold text-red-900 text-lg flex items-center gap-1.5">
              <MapPin className="w-5 h-5 text-red-700" /> 
-             {optimizedRoute.length > 0 ? (lang === 'en' ? `${optimizedRoute.length - 1} pandals` : `${optimizedRoute.length - 1}টি মণ্ডপ`) : (lang === 'en' ? '0 pandals' : '0টি মণ্ডপ')}
+             {optimizedRoute.length > 1 ? (lang === 'en' ? `${optimizedRoute.length - 1} pandals` : `${optimizedRoute.length - 1}টি মণ্ডপ`) : (lang === 'en' ? '0 pandals' : '0টি মণ্ডপ')}
            </div>
-           <div className="font-extrabold text-amber-600 text-lg flex items-center gap-1.5">
-             <Clock className="w-5 h-5" /> 
-             ~{stats ? (lang === 'bn' ? formatDurationBn(stats.totalMin) : formatDuration(stats.totalMin, lang)) : '—'}
-           </div>
+           {optimizedRoute.length > 1 && stats && (
+             <div className="font-extrabold text-amber-600 text-lg flex items-center gap-1.5">
+               <Clock className="w-5 h-5" /> 
+               ~{lang === 'bn' ? formatDurationBn(stats.totalMin) : formatDuration(stats.totalMin, lang)}
+             </div>
+           )}
          </div>
       </button>
 
@@ -523,9 +531,13 @@ export default function PlannerSection() {
       )}
 
       {/* MAP */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-10">
         <MapView
-          mode={liveNavState.isNavigating ? 'navigate' : (hasSelectedTime || isPickingFromMap) ? 'plan' : 'discover'}
+          mode={
+            liveNavState.isNavigating ? 'navigate'
+            : (hasSelectedTime || isPickingFromMap || manualPandals.length > 0) ? 'plan'
+            : 'discover'
+          }
           pandalsData={pandalsData}
           selectedRoute={optimizedRoute}
           onAddPandal={handleAddPandal}
@@ -665,23 +677,26 @@ export default function PlannerSection() {
                 ))}
                 <button
                    onClick={handleOtherTime}
-                   className="col-span-2 md:col-span-4 py-2 mt-1 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors"
+                   className="col-span-2 md:col-span-4 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold bg-white border-2 border-gray-200 text-gray-700 hover:border-red-300 hover:bg-red-50 hover:text-red-700 transition-colors"
                 >
-                  {t('pl_time_other')}
+                  <PlusCircle className="w-4 h-4" />
+                  <span>{lang === 'en' ? 'Other' : 'অন্যান্য'}</span>
                 </button>
               </div>
 
               {/* More Options */}
-              <div className="bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden">
+              <div className="bg-transparent mt-2">
                 <button 
                   onClick={() => setShowMoreOptions(!showMoreOptions)} 
-                  className="w-full flex items-center justify-between p-4 font-bold text-gray-700"
+                  className="w-full flex items-center justify-between py-3 px-4 rounded-xl bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <Settings2 className="w-4 h-4 text-gray-400" />
-                    {t('pl_more_options')}
+                    <Settings2 className="w-4 h-4 text-gray-600" />
+                    <span className="text-sm font-bold text-gray-700">
+                      {t('pl_more_options')}
+                    </span>
                   </div>
-                  {showMoreOptions ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                  {showMoreOptions ? <ChevronUp className="w-4 h-4 text-gray-700" /> : <ChevronDown className="w-4 h-4 text-gray-700" />}
                 </button>
                 
                 {showMoreOptions && (
@@ -863,6 +878,32 @@ export default function PlannerSection() {
           </div>
         </div>
       )}
+
+      <PandalListModal
+        isOpen={isListModalOpen}
+        onClose={() => setIsListModalOpen(false)}
+        pandals={optimizedRoute.filter(p => p.id !== 'END' && p.id !== '__START__')}
+        lang={lang}
+        onRemove={handleRemovePandal}
+        onClearAll={() => {
+          setManualPandals([]);
+          setBudgetMin(null);
+          setTopN(null);
+          setHasSelectedTime(false);
+          setHasUserInteracted(false);
+          setPlannerTab(null);
+          setIsListModalOpen(false);
+        }}
+        onNavigate={(pandal) => {
+          const originLoc = liveNavState?.userLocation || startLocation;
+          const originParam = originLoc ? `&origin=${originLoc.lat},${originLoc.lng}` : '';
+          const mode = transportMode === 'car' ? 'driving' : 'walking';
+          window.open(
+            `https://www.google.com/maps/dir/?api=1${originParam}&destination=${pandal.lat},${pandal.lng}&travelmode=${mode}`,
+            '_blank'
+          );
+        }}
+      />
     </section>
   );
 }

@@ -231,7 +231,12 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
               setCurrentStepInitialDist(step.distance || 0);
               const parsed = parseManeuver(step, t);
               setCurrentManeuver(parsed);
-              setLiveRemainingMeters(Math.round(step.distance || 0));
+              const stepDist = step.distance || 0;
+              const fallbackDist = Math.round(turf.distance(
+                turf.point([rawLng, rawLat]),
+                turf.point([activePandal.lng, activePandal.lat])
+              ) * 1000);
+              setLiveRemainingMeters(stepDist > 20 ? Math.round(stepDist) : fallbackDist);
               lastSpokenStepIndexRef.current = -1;
             }
           } else {
