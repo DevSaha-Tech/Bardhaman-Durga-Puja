@@ -277,7 +277,7 @@ export default function MapView({
   }, [isNavigating]);
 
   return (
-    <div className="relative w-full h-screen bg-gray-50 overflow-hidden">
+    <div className="relative w-full h-[100dvh] bg-gray-50 overflow-hidden">
       {!isNavigating && (
         <div className="absolute top-4 left-16 right-4 z-[999] max-w-md">
           <div className="relative">
@@ -547,7 +547,8 @@ export default function MapView({
       {!isNavigating && !drawerOpen && onOpenPlanner && (
         <button
           onClick={onOpenPlanner}
-          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] flex items-center justify-center bg-[#8B1E3F] hover:bg-[#701830] text-white rounded-full shadow-[0_4px_12px_rgba(139,30,63,0.35)] w-12 h-12 transition-all duration-300 pointer-events-auto"
+          className="absolute left-1/2 -translate-x-1/2 z-[1000] flex items-center justify-center bg-[#8B1E3F] hover:bg-[#701830] text-white rounded-full shadow-[0_4px_12px_rgba(139,30,63,0.35)] w-12 h-12 transition-all duration-300 pointer-events-auto"
+          style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
           aria-label={t('pl_open_planner') || "Open planner"}
         >
           <ChevronUp className="w-6 h-6 text-white" />
