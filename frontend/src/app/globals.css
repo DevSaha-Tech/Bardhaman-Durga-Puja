@@ -1,28 +1,91 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #FAF6EE;
+  --foreground: #1F1B16;
+  --brand-primary: #8B1E3F;
+  --brand-secondary: #E8A33D;
+  --brand-card: #FFFEFA;
+  --brand-text-sec: #6B6257;
+  --brand-hover: #C24A34;
+  --brand-success: #2E7D50;
+  --brand-warning: #D97706;
+  --brand-border: #E5DBC8;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-brand-card: var(--brand-card);
+  --color-brand-text-sec: var(--brand-text-sec);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-success: var(--brand-success);
+  --color-brand-warning: var(--brand-warning);
+  --color-brand-border: var(--brand-border);
+  --font-sans: var(--font-bengali-sans), var(--font-inter), sans-serif;
+  --font-serif: var(--font-bengali-serif), var(--font-playfair), serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #FAF6EE;
+  color: #1F1B16;
+  font-family: var(--font-bengali-sans), var(--font-inter), sans-serif;
+  overflow-x: hidden;
+}
+
+/* Premium Reveal & Motion Styles */
+.reveal-init {
+  opacity: 0;
+  transition-property: opacity, transform;
+  transition-duration: 800ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.reveal-fade-up {
+  transform: translateY(28px);
+}
+
+.reveal-fade-down {
+  transform: translateY(-24px);
+}
+
+.reveal-scale-up {
+  transform: scale(0.94) translateY(20px);
+}
+
+.reveal-fade-in {
+  transform: none;
+}
+
+.reveal-active {
+  opacity: 1 !important;
+  transform: translateY(0) scale(1) !important;
+}
+
+/* Luxury card hover glow & subtle lift */
+.card-hover-lift {
+  transition: transform 350ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 350ms cubic-bezier(0.16, 1, 0.3, 1), border-color 350ms ease;
+}
+
+.card-hover-lift:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 14px 30px -10px rgba(139, 30, 63, 0.08), 0 4px 12px -2px rgba(232, 163, 61, 0.08);
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-init {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
 }
 
 .pandal-name-label {
