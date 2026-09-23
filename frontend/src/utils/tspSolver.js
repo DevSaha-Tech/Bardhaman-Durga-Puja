@@ -112,6 +112,39 @@ export function optimizeRouteTSP(points) {
       }
     }
   }
+  // First-hop lock preserves walking UX — user should never walk past a nearby pandal to visit a farther one first.
+  let nearestIdx = -1;
+  let minD = Infinity;
+  for (let i = 1; i < route.length; i++) {
+    const d = getDistanceFallback(route[0], route[i]);
+    if (d < minD) {
+      minD = d;
+      nearestIdx = i;
+    }
+  }
+
+  if (nearestIdx > 1) {
+    let distBefore = 0;
+    for (let i = 0; i < route.length; i++) {
+      distBefore += getDistanceFallback(route[i], route[(i + 1) % route.length]);
+    }
+
+    const backupRoute = [...route];
+    const beforeNearest = route.slice(1, nearestIdx);
+    const nearest = route[nearestIdx];
+    // Delete nearestIdx elements starting from index 1, and insert nearest followed by beforeNearest
+    route.splice(1, nearestIdx, nearest, ...beforeNearest);
+
+    let distAfter = 0;
+    for (let i = 0; i < route.length; i++) {
+      distAfter += getDistanceFallback(route[i], route[(i + 1) % route.length]);
+    }
+
+    if (distAfter > distBefore * 1.15) {
+      route = backupRoute;
+    }
+  }
+
   return route;
 }
 

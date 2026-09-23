@@ -36,6 +36,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
   const liveCountsRef = useRef({});
   const lastOsrmFailTimeRef = useRef(0);
   const consecutiveArrivalsRef = useRef(0);
+  const lastArrivalTimeRef = useRef(0);
 
   const activePandal = optimizedRoute[currentStopIndex] || null;
 
@@ -142,6 +143,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
   const skipToNext = () => {
     if (currentStopIndex < optimizedRoute.length - 1) {
       setCurrentStopIndex(prev => prev + 1);
+      lastArrivalTimeRef.current = Date.now();
       const nextPandalName = sanitizeName(optimizedRoute[currentStopIndex + 1]);
       speakPrompt(`${t('skip')} ${nextPandalName}`);
     } else {
@@ -198,11 +200,16 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
       setDistanceToTarget(distMeters);
 
       // 2. Ghost Arrival Protection (<= ARRIVAL_RADIUS_METERS for 2 consecutive ticks)
-      if (distMeters <= ARRIVAL_RADIUS_METERS) {
+      const nowMs = Date.now();
+      const timeSinceLastArrival = nowMs - lastArrivalTimeRef.current;
+      const ARRIVAL_GRACE_MS = 5000;
+
+      if (distMeters <= ARRIVAL_RADIUS_METERS && timeSinceLastArrival > ARRIVAL_GRACE_MS) {
         consecutiveArrivalsRef.current += 1;
         if (consecutiveArrivalsRef.current >= 2) {
           // speakPrompt removed per fix 3
           consecutiveArrivalsRef.current = 0;
+          lastArrivalTimeRef.current = nowMs;
           return;
         }
       } else {
@@ -269,7 +276,25 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
               setCurrentStepInitialDist(nextStep.distance || 0);
               const parsed = parseManeuver(nextStep, t);
               setCurrentManeuver(parsed);
-              setLiveRemainingMeters(Math.round(nextStep.distance || 0));
+
+              // Compute live distance to the new step end
+              let nextEndLng, nextEndLat;
+              if (nextStep.maneuver && nextStep.maneuver.location) {
+                [nextEndLng, nextEndLat] = nextStep.maneuver.location;
+              } else if (nextStep.geometry && nextStep.geometry.coordinates) {
+                const c = nextStep.geometry.coordinates;
+                [nextEndLng, nextEndLat] = c[c.length - 1];
+              }
+
+              if (nextEndLng !== undefined && nextEndLat !== undefined) {
+                const nextEndPoint = turf.point([nextEndLng, nextEndLat]);
+                const distToNewEnd = Math.round(
+                  turf.distance(rawUserPoint, nextEndPoint) * 1000
+                );
+                setLiveRemainingMeters(distToNewEnd);
+              } else {
+                setLiveRemainingMeters(Math.round(nextStep.distance || 0));
+              }
 
               if (lastSpokenStepIndexRef.current !== nextIdx && parsed) {
                 lastSpokenStepIndexRef.current = nextIdx;
