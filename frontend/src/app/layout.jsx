@@ -35,38 +35,79 @@ const inter = Inter({
 
 export const metadata = {
   metadataBase: new URL('https://cholopujo.devsaha.tech'),
-  title: "Cholo Pujo, Bardhaman Durga Puja 2026 Route Planner",
-  description: "বর্ধমান ও কাটোয়ার দুর্গাপূজার পণ্ডেলগুলো সবচেয়ে কম সময়ে ঘুরে দেখুন। বাংলায় ভয়েস গাইড, রুট প্ল্যানার, সম্পূর্ণ ফ্রি, লগইন ছাড়াই।",
-  keywords: ["durga puja bardhaman", "katwa durga puja", "pandal hopping", "puja route planner", "bengali navigation"],
+  
+  title: {
+    default: 'Cholo Pujo, Bardhaman Durga Puja 2026 Route Planner',
+    template: '%s | Cholo Pujo',
+  },
+  
+  description: 'Plan your Durga Puja pandal hopping in Bardhaman and Katwa. Free route planner with Bengali voice navigation. Start from where you are, end at the same place.',
+  
+  keywords: [
+    'Durga Puja Bardhaman',
+    'Bardhaman pandal hopping',
+    'Katwa Durga Puja',
+    'puja route planner',
+    'pandal map Bardhaman',
+    'Bengali navigation',
+    'Cholo Pujo',
+  ],
+  
+  authors: [{ name: 'DevSaha Tech', url: 'https://devsaha.tech' }],
+  creator: 'DevSaha Tech',
+  publisher: 'DevSaha Tech',
+  
+  applicationName: 'Cholo Pujo',
+  
   alternates: {
     canonical: 'https://cholopujo.devsaha.tech',
+    languages: {
+      'bn-IN': 'https://cholopujo.devsaha.tech',
+      'en-IN': 'https://cholopujo.devsaha.tech',
+    },
   },
-  icons: {
-    icon: '/favicon.png',
-    shortcut: '/favicon.png',
-    apple: '/favicon.png',
-  },
+  
   openGraph: {
-    title: "Cholo Pujo, Bardhaman Durga Puja Route Planner",
-    description: "Plan your pandal hopping route in Bardhaman & Katwa. Free, no login.",
-    url: "https://cholopujo.devsaha.tech",
-    siteName: "Cholo Pujo",
+    type: 'website',
+    locale: 'bn_IN',
+    alternateLocale: ['en_IN'],
+    url: 'https://cholopujo.devsaha.tech',
+    siteName: 'Cholo Pujo',
+    title: 'Cholo Pujo, Bardhaman Durga Puja 2026 Route Planner',
+    description: 'Plan your Durga Puja pandal hopping in Bardhaman and Katwa. Free, no login.',
     images: [
       {
-        url: "/hero.png",
+        url: '/logo.png',
         width: 1200,
         height: 630,
-        alt: "Cholo Pujo, Durga Puja Route Planner",
+        alt: 'Cholo Pujo, Bardhaman Durga Puja Route Planner',
       },
     ],
-    locale: "bn_IN",
-    type: "website",
   },
+  
   twitter: {
-    card: "summary_large_image",
-    title: "Cholo Pujo, Bardhaman Durga Puja Route Planner",
-    description: "Plan your pandal hopping route in Bardhaman & Katwa. Free, no login.",
-    images: ["/hero.png"],
+    card: 'summary_large_image',
+    title: 'Cholo Pujo, Bardhaman Durga Puja 2026 Route Planner',
+    description: 'Plan your Durga Puja pandal hopping in Bardhaman and Katwa. Free.',
+    images: ['/logo.png'],
+  },
+  
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  
+  verification: {
+    // If you have a Google verification code from Search Console
+    // (URL prefix property), add it here:
+    // google: 'your-verification-code',
   },
 };
 

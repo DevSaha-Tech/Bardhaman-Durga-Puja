@@ -3,8 +3,21 @@ import PlannerSection from '@/components/PlannerSection';
 import Footer from '@/components/Footer';
 
 export const metadata = {
-  title: "Plan Your Puja Route, Bardhaman 2026",
-  description: "Optimize your pandal route with live GPS and Bengali voice navigation.",
+  title: 'Plan Your Puja Route',
+  description: 'Pick your pandals and get the shortest route in Bardhaman or Katwa. Free, no login.',
+  alternates: {
+    canonical: 'https://cholopujo.devsaha.tech/planner',
+  },
+  openGraph: {
+    type: 'website',
+    url: 'https://cholopujo.devsaha.tech/planner',
+    title: 'Plan Your Puja Route | Cholo Pujo',
+    description: 'Pick your pandals and get the shortest route.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function PlannerPage() {

@@ -29,6 +29,85 @@ export default function Home() {
 
       {/* Footer */}
       <LandingFooter />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebApplication",
+            "name": "Cholo Pujo",
+            "alternateName": "চলো পূজো",
+            "url": "https://cholopujo.devsaha.tech",
+            "description": "Route planner for Durga Puja pandal hopping in Bardhaman and Katwa, West Bengal.",
+            "applicationCategory": "TravelApplication",
+            "operatingSystem": "Web",
+            "inLanguage": ["bn-IN", "en-IN"],
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "INR"
+            },
+            "author": {
+              "@type": "Organization",
+              "name": "DevSaha Tech",
+              "url": "https://devsaha.tech"
+            },
+            "areaServed": [
+              {
+                "@type": "City",
+                "name": "Bardhaman",
+                "address": {
+                  "@type": "PostalAddress",
+                  "addressLocality": "Bardhaman",
+                  "addressRegion": "West Bengal",
+                  "addressCountry": "IN"
+                }
+              },
+              {
+                "@type": "City",
+                "name": "Katwa",
+                "address": {
+                  "@type": "PostalAddress",
+                  "addressLocality": "Katwa",
+                  "addressRegion": "West Bengal",
+                  "addressCountry": "IN"
+                }
+              }
+            ]
+          })
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Event",
+            "name": "Durga Puja 2026, Bardhaman",
+            "startDate": "2026-10-16",
+            "endDate": "2026-10-21",
+            "eventStatus": "https://schema.org/EventScheduled",
+            "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+            "location": {
+              "@type": "Place",
+              "name": "Bardhaman",
+              "address": {
+                "@type": "PostalAddress",
+                "addressLocality": "Bardhaman",
+                "addressRegion": "West Bengal",
+                "addressCountry": "IN"
+              }
+            },
+            "image": "https://cholopujo.devsaha.tech/logo.png",
+            "description": "Durga Puja 2026 in Bardhaman. Plan your pandal hopping with Cholo Pujo.",
+            "organizer": {
+              "@type": "Organization",
+              "name": "DevSaha Tech",
+              "url": "https://devsaha.tech"
+            }
+          })
+        }}
+      />
     </main>
   );
 }

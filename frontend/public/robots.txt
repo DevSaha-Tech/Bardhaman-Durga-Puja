@@ -1,3 +1,3 @@
-﻿User-agent: *
+User-agent: *
 Allow: /
-Sitemap: https://puja.devsaha.tech/sitemap.xml
+Sitemap: https://cholopujo.devsaha.tech/sitemap.xml

@@ -1,11 +1,11 @@
-﻿export default function sitemap() {
+export default function sitemap() {
   return [
     {
-      url: 'https://puja.devsaha.tech/',
+      url: 'https://cholopujo.devsaha.tech/',
       lastModified: new Date(),
     },
     {
-      url: 'https://puja.devsaha.tech/planner',
+      url: 'https://cholopujo.devsaha.tech/planner',
       lastModified: new Date(),
     },
   ]
