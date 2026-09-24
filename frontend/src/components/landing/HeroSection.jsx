@@ -82,14 +82,14 @@ export default function HeroSection() {
               <p className="text-sm sm:text-lg text-[#524B42] sm:text-[#6B6257] font-sans leading-relaxed mb-10 sm:mb-7 max-w-xs sm:max-w-lg font-medium">
                 {lang === 'bn' ? (
                   <>
-                    <span className="block sm:inline">সবচেয়ে কম সময়ে, কম জ্যামে —</span>{' '}
+                    <span className="block sm:inline">সবচেয়ে কম সময়ে, কম জ্যামে,</span>{' '}
                     <span className="block sm:inline">সেরা পণ্ডেলগুলো ঘুরে দেখুন।</span>{' '}
                     <span className="block sm:inline">ফ্রি,</span>{' '}
                     <span className="block sm:inline">লগইন ছাড়াই।</span>
                   </>
                 ) : lang === 'bng' ? (
                   <>
-                    <span className="block sm:inline">Sobcheye kom shomoye, kom jam-e —</span>{' '}
+                    <span className="block sm:inline">Sobcheye kom shomoye, kom jam-e,</span>{' '}
                     <span className="block sm:inline">shera pandal gulo ghure dekhun.</span>{' '}
                     <span className="block sm:inline">Free,</span>{' '}
                     <span className="block sm:inline">login charai.</span>

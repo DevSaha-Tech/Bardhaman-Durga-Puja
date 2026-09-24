@@ -614,8 +614,8 @@ export default function PlannerSection() {
                               ? `Done with first ${batchState.batches[batchState.currentBatchIndex].length}? Tap for next batch`
                               : `প্রথম ${batchState.batches[batchState.currentBatchIndex].length}টি শেষ? পরেরটির জন্য ক্লিক করুন`)
                           : (lang === 'en'
-                              ? `Almost done — ${batchState.batches[batchState.currentBatchIndex].length} stops left`
-                              : `প্রায় শেষ — বাকি ${batchState.batches[batchState.currentBatchIndex].length}টি মণ্ডপ`)
+                              ? `Almost done, ${batchState.batches[batchState.currentBatchIndex].length} stops left`
+                              : `প্রায় শেষ, বাকি ${batchState.batches[batchState.currentBatchIndex].length}টি মণ্ডপ`)
                         }
                       </p>
                       <p className="text-[11px] text-gray-500 mt-1">
@@ -781,7 +781,7 @@ export default function PlannerSection() {
               {/* Summary Card & Actions Gated by Selection */}
               {!(hasSelectedTime || manualPandals.length > 0 || optimizedRoute.length > 0) ? (
                 <div className="mt-4 p-6 border-2 border-dashed border-gray-200 rounded-2xl text-center bg-gray-50 flex items-center justify-center h-48">
-                  <p className="text-gray-500 font-medium text-sm">সময় বেছে নিন — আমরা সেরা রুট বানিয়ে দেব</p>
+                  <p className="text-gray-500 font-medium text-sm">সময় বেছে নিন, আমরা সেরা রুট বানিয়ে দেব</p>
                 </div>
               ) : (
                 <>

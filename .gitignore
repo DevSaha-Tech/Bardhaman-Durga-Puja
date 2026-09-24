@@ -119,3 +119,4 @@ $RECYCLE.BIN/
 *.tar.gz
 *.zip
 .agents/
+frontend/supabase_schema.sql

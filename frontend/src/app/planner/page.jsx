@@ -3,7 +3,7 @@ import PlannerSection from '@/components/PlannerSection';
 import Footer from '@/components/Footer';
 
 export const metadata = {
-  title: "Plan Your Puja Route — Bardhaman 2026",
+  title: "Plan Your Puja Route, Bardhaman 2026",
   description: "Optimize your pandal route with live GPS and Bengali voice navigation.",
 };
 

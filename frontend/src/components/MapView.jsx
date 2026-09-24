@@ -374,7 +374,7 @@ export default function MapView({
             {osrmError && (
               <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4" />
-                OSRM লিমিট পৌঁছেছে — সরাসরি রুট দেখানো হচ্ছে
+                OSRM লিমিট পৌঁছেছে, সরাসরি রুট দেখানো হচ্ছে
               </div>
             )}
           </>
