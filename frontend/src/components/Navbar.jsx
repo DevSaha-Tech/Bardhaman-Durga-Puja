@@ -28,7 +28,7 @@ export default function Navbar() {
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-lg md:text-xl text-[#8B1E3F] font-serif leading-tight">Cholo Pujo</span>
-              <span className="text-[10px] text-[#6B6257] font-semibold tracking-wider uppercase">Route Planner</span>
+              <span className="block text-right text-[9px] text-[#6B6257] font-semibold tracking-wide leading-tight mt-0.5">by DevSaha Tech</span>
             </div>
           </a>
 
