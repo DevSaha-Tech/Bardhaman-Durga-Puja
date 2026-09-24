@@ -115,6 +115,12 @@ export default function LandingFooter() {
                   </a>
                 </li>
                 <li className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-[#8B1E3F]" />
+                  <a href="tel:+919907962182" className="hover:text-[#8B1E3F] transition-colors">
+                    +91 99079 62182
+                  </a>
+                </li>
+                <li className="flex items-center gap-2">
                   <MessageCircle className="w-4 h-4 text-[#8B1E3F]" />
                   <a
                     href="https://wa.me/916295111477"

@@ -5,7 +5,8 @@ import { getCachedRoute, setCachedRoute, ROUTE_CACHE_VERSION } from '../lib/rout
 //  Provider 1: OSRM (fast, sometimes rate-limited)
 // ============================================================
 async function fetchOSRM(origin, dest, profile, signal) {
-  const url = `https://router.project-osrm.org/route/v1/${profile}/${origin[0]},${origin[1]};${dest[0]},${dest[1]}?steps=true&geometries=geojson&overview=full`;
+  const rnd = (val) => Number(val).toFixed(5);
+  const url = `https://puja-osrm-proxy.devsahatech.workers.dev/route/v1/${profile}/${rnd(origin[0])},${rnd(origin[1])};${rnd(dest[0])},${rnd(dest[1])}?steps=true&geometries=geojson&overview=full`;
   const res  = await fetch(url, { signal });
   const data = await res.json();
   if (data.code === 'Ok' && data.routes?.length > 0) return data.routes[0];

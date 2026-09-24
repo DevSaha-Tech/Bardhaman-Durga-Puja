@@ -68,6 +68,9 @@ export default function LocalBusinesses() {
             <p className="text-base md:text-lg text-[#6B6257]">
               {t('biz_sec_sub')}
             </p>
+            <p className="text-xs text-[#6B6257] italic mt-2">
+              {t('biz_sponsored')}
+            </p>
           </ScrollReveal>
           
           <ScrollReveal animation="scale-up" delay={100} duration={700}>
@@ -106,6 +109,9 @@ export default function LocalBusinesses() {
           </h2>
           <p className="text-base md:text-lg text-[#6B6257]">
             {t('biz_sec_sub')}
+          </p>
+          <p className="text-xs text-[#6B6257] italic mt-2">
+            {t('biz_sponsored')}
           </p>
         </ScrollReveal>
 

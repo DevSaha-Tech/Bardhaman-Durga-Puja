@@ -63,27 +63,44 @@ function RoutePlaneIcon({ className = "w-9 h-9" }) {
   );
 }
 
+function NavigationVoiceIcon({ className = "w-9 h-9" }) {
+  return (
+    <svg className={className} viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Simple navigation arrow */}
+      <path d="M26 12L14 36L26 31L38 36L26 12Z" fill="#80132F" />
+      {/* Voice waves */}
+      <path d="M12 24C12 24 16 20 26 20C36 20 40 24 40 24" stroke="#D9A86C" strokeWidth="2.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default function HowItWorksSection() {
   const { t } = useLanguage();
 
   const steps = [
     {
-      numberKey: 'hiw_step1_n',
-      titleKey: 'hiw_step1_t',
-      textKey: 'hiw_step1_d',
+      numberKey: 'hiw1_n',
+      titleKey: 'hiw1_t',
+      textKey: 'hiw1_d',
       Icon: LocationRadarIcon,
     },
     {
-      numberKey: 'hiw_step2_n',
-      titleKey: 'hiw_step2_t',
-      textKey: 'hiw_step2_d',
+      numberKey: 'hiw2_n',
+      titleKey: 'hiw2_t',
+      textKey: 'hiw2_d',
       Icon: PandalChecklistIcon,
     },
     {
-      numberKey: 'hiw_step3_n',
-      titleKey: 'hiw_step3_t',
-      textKey: 'hiw_step3_d',
+      numberKey: 'hiw3_n',
+      titleKey: 'hiw3_t',
+      textKey: 'hiw3_d',
       Icon: RoutePlaneIcon,
+    },
+    {
+      numberKey: 'hiw4_n',
+      titleKey: 'hiw4_t',
+      textKey: 'hiw4_d',
+      Icon: NavigationVoiceIcon,
     },
   ];
 
@@ -103,7 +120,7 @@ export default function HowItWorksSection() {
         </ScrollReveal>
 
         {/* Steps Grid matching Reference Image with Option A proportions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 lg:gap-6 relative mb-12 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6 relative mb-12 items-stretch">
           {steps.map((step, idx) => {
             const IconComp = step.Icon;
             return (

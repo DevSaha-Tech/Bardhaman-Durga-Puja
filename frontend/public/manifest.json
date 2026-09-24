@@ -1,0 +1,21 @@
+{
+  "name": "Cholo Pujo",
+  "short_name": "Cholo Pujo",
+  "description": "Durga Puja route planner for Bardhaman and Katwa",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF6EE",
+  "theme_color": "#8B1E3F",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -11,8 +11,9 @@ export default function HeroSection() {
   const { t, lang } = useLanguage();
 
   return (
-    <section className="relative w-full min-h-[calc(100vh-5rem)] bg-[#FAF6EE] pt-15 pb-10 sm:pt-6 md:pt-12 md:pb-14 overflow-hidden border-b border-[#E5DBC8] flex items-start md:items-center">
-      {/* Background Graphic Canvas (hero4.jpg on desktop, hero-mobile.jpg on mobile) */}
+    <>
+      <section className="relative w-full min-h-[calc(100vh-5rem)] bg-[#FAF6EE] pt-15 pb-10 sm:pt-6 md:pt-12 md:pb-14 overflow-hidden border-b border-[#E5DBC8] flex items-start md:items-center">
+        {/* Background Graphic Canvas (hero4.jpg on desktop, hero-mobile.jpg on mobile) */}
       <div className="absolute inset-0 z-0 pointer-events-none select-none">
         {/* Desktop Canvas Background */}
         <div className="hidden md:block relative w-full h-full">
@@ -168,5 +169,12 @@ export default function HeroSection() {
         </div>
       </div>
     </section>
+      
+      <div className="max-w-3xl mx-auto px-4 py-8 text-center">
+        <p className="text-sm text-[#6B6257]">
+          {t('hero_intro_text')}
+        </p>
+      </div>
+    </>
   );
 }

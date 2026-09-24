@@ -6,7 +6,7 @@ import React, { useEffect, useRef, useState } from 'react';
  * ScrollReveal component for smooth, GPU-accelerated scroll and incoming animations.
  * 
  * @param {Object} props
- * @param {React.ReactNode} props.children
+ * @param {ReactNode} props.children
  * @param {'fade-up' | 'fade-down' | 'fade-in' | 'scale-up'} [props.animation='fade-up']
  * @param {number} [props.delay=0] Delay in milliseconds
  * @param {number} [props.duration=800] Duration in milliseconds

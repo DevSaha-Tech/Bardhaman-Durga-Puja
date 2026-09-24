@@ -41,7 +41,7 @@ export const metadata = {
     template: '%s | Cholo Pujo',
   },
   
-  description: 'Plan your Durga Puja pandal hopping in Bardhaman and Katwa. Free route planner with Bengali voice navigation. Start from where you are, end at the same place.',
+  description: 'Plan your Durga Puja pandal hopping in Bardhaman & Katwa. Free route planner with Bengali voice guidance. No login required.',
   
   keywords: [
     'Durga Puja Bardhaman',
@@ -64,6 +64,7 @@ export const metadata = {
     languages: {
       'bn-IN': 'https://cholopujo.devsaha.tech',
       'en-IN': 'https://cholopujo.devsaha.tech',
+      'x-default': 'https://cholopujo.devsaha.tech',
     },
   },
   
@@ -95,6 +96,7 @@ export const metadata = {
   robots: {
     index: true,
     follow: true,
+    nocache: false,
     googleBot: {
       index: true,
       follow: true,
@@ -105,9 +107,37 @@ export const metadata = {
   },
   
   verification: {
-    // If you have a Google verification code from Search Console
-    // (URL prefix property), add it here:
-    // google: 'your-verification-code',
+    // google: '',  // Google Search Console (already verified via DNS)
+    // other: {
+    //   'msvalidate.01': '',  // Bing Webmaster
+    //   'yandex-verification': '',  // Yandex
+    // },
+  },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    title: 'Cholo Pujo',
+    statusBarStyle: 'default',
+  },
+  formatDetection: {
+    telephone: false,
+    email: false,
+    address: false,
+  },
+  category: 'travel',
+  classification: 'Durga Puja Route Planner',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
+      { url: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+    other: [
+      { rel: 'mask-icon', url: '/safari-pinned-tab.svg', color: '#8B1E3F' },
+    ],
   },
 };
 

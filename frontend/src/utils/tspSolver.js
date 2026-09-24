@@ -2,7 +2,7 @@ import { APP_CONFIG } from '../config/appConfig';
 import * as turf from '@turf/turf';
 import { getCachedRoute, setCachedRoute, ROUTE_CACHE_VERSION } from '../lib/routeCache';
 
-const OSRM_BASE_URL = 'https://router.project-osrm.org';
+const OSRM_BASE_URL = 'https://puja-osrm-proxy.devsahatech.workers.dev';
 
 // Calculate Haversine distance in km
 export function haversineDistance(point1, point2) {
@@ -27,7 +27,7 @@ export async function fetchOSRMRoute(startLng, startLat, endLng, endLat, mode = 
   if (cached) return cached;
   
   try {
-    const url = `${OSRM_BASE_URL}/route/v1/${profile}/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson&steps=true`;
+    const url = `${OSRM_BASE_URL}/route/v1/${profile}/${rnd(startLng)},${rnd(startLat)};${rnd(endLng)},${rnd(endLat)}?overview=full&geometries=geojson&steps=true`;
     const response = await fetch(url);
     if (!response.ok) throw new Error(`OSRM API error: ${response.status}`);
     const data = await response.json();

@@ -9,6 +9,21 @@ import SupportProject from '@/components/landing/SupportProject';
 import EmergencyNumbers from '@/components/landing/EmergencyNumbers';
 import LandingFooter from '@/components/landing/LandingFooter';
 
+export const metadata = {
+  title: 'Cholo Pujo, Bardhaman Durga Puja 2026 Route Planner',
+  description: 'Plan your Durga Puja pandal hopping in Bardhaman & Katwa. Free route planner with Bengali voice guidance. No login required.',
+  alternates: {
+    canonical: 'https://cholopujo.devsaha.tech',
+  },
+  openGraph: {
+    type: 'website',
+    url: 'https://cholopujo.devsaha.tech',
+    title: 'Cholo Pujo, Bardhaman Durga Puja 2026 Route Planner',
+    description: 'Plan your Durga Puja pandal hopping in Bardhaman & Katwa. Free, no login.',
+    siteName: 'Cholo Pujo',
+  },
+};
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#FAF6EE] text-[#1F1B16] font-sans antialiased">

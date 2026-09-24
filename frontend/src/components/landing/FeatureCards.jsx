@@ -6,102 +6,41 @@ import SectionCornerPatterns from './SectionCornerPatterns';
 import SectionDivider from './SectionDivider';
 import ScrollReveal from '@/components/ui/ScrollReveal';
 
-// Custom icons matching the reference design
-function MapRouteIcon({ className = "w-9 h-9" }) {
-  return (
-    <svg className={className} viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Folded Map Canvas */}
-      <path 
-        d="M7 16L19 10L33 16L45 10V36L33 42L19 36L7 42V16Z" 
-        fill="#FDF6ED" 
-        stroke="#D9A86C" 
-        strokeWidth="2.2" 
-        strokeLinejoin="round" 
-      />
-      <path 
-        d="M19 10V36" 
-        stroke="#D9A86C" 
-        strokeWidth="2" 
-        strokeLinecap="round" 
-        strokeDasharray="2.5 3" 
-      />
-      <path 
-        d="M33 16V42" 
-        stroke="#D9A86C" 
-        strokeWidth="2" 
-        strokeLinecap="round" 
-        strokeDasharray="2.5 3" 
-      />
-      {/* Central Route Pin */}
-      <path 
-        d="M26 12C22.134 12 19 15.134 19 19C19 24.5 26 31 26 31C26 31 33 24.5 33 19C33 15.134 29.866 12 26 12Z" 
-        fill="#80132F" 
-      />
-      <circle cx="26" cy="19" r="3" fill="#FAF0E6" />
-    </svg>
-  );
-}
-
-function VoiceMicIcon({ className = "w-9 h-9" }) {
-  return (
-    <svg className={className} viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Left sound waves */}
-      <path d="M11 22V30" stroke="#D9A86C" strokeWidth="2.8" strokeLinecap="round" />
-      <path d="M16 18V34" stroke="#D9A86C" strokeWidth="2.8" strokeLinecap="round" />
-      {/* Mic capsule */}
-      <rect x="22" y="11" width="8" height="17" rx="4" fill="#80132F" />
-      {/* Mic holder bracket */}
-      <path 
-        d="M18 22.5C18 26.918 21.582 30.5 26 30.5C30.418 30.5 34 26.918 34 22.5" 
-        stroke="#80132F" 
-        strokeWidth="2.8" 
-        strokeLinecap="round" 
-      />
-      <path d="M26 30.5V38M21 38H31" stroke="#80132F" strokeWidth="2.8" strokeLinecap="round" />
-      {/* Right sound waves */}
-      <path d="M36 18V34" stroke="#D9A86C" strokeWidth="2.8" strokeLinecap="round" />
-      <path d="M41 22V30" stroke="#D9A86C" strokeWidth="2.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ShareNodesIcon({ className = "w-9 h-9" }) {
-  return (
-    <svg className={className} viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Connection lines */}
-      <line x1="18" y1="26" x2="34" y2="17" stroke="#D9A86C" strokeWidth="3" strokeLinecap="round" />
-      <line x1="18" y1="26" x2="34" y2="35" stroke="#D9A86C" strokeWidth="3" strokeLinecap="round" />
-      {/* Main Left Node */}
-      <circle cx="17" cy="26" r="7.5" fill="#80132F" />
-      <circle cx="17" cy="26" r="2.5" fill="#FAF0E6" />
-      {/* Top Right Node */}
-      <circle cx="35" cy="16" r="6" fill="#80132F" />
-      <circle cx="35" cy="16" r="2" fill="#FAF0E6" />
-      {/* Bottom Right Node */}
-      <circle cx="35" cy="36" r="6" fill="#80132F" />
-      <circle cx="35" cy="36" r="2" fill="#FAF0E6" />
-    </svg>
-  );
-}
+import { Trophy, Clock, Search, Map, Share2, Mic } from 'lucide-react';
 
 export default function FeatureCards() {
   const { t } = useLanguage();
 
   const features = [
     {
-      Icon: MapRouteIcon,
+      Icon: Trophy,
       titleKey: 'feat1_card_t',
       descKey: 'feat1_card_d',
     },
     {
-      Icon: VoiceMicIcon,
+      Icon: Clock,
       titleKey: 'feat2_card_t',
       descKey: 'feat2_card_d',
     },
     {
-      Icon: ShareNodesIcon,
+      Icon: Search,
       titleKey: 'feat3_card_t',
       descKey: 'feat3_card_d',
+    },
+    {
+      Icon: Map,
+      titleKey: 'feat4_card_t',
+      descKey: 'feat4_card_d',
+    },
+    {
+      Icon: Share2,
+      titleKey: 'feat5_card_t',
+      descKey: 'feat5_card_d',
+    },
+    {
+      Icon: Mic,
+      titleKey: 'feat6_card_t',
+      descKey: 'feat6_card_d',
     },
   ];
 
@@ -121,7 +60,7 @@ export default function FeatureCards() {
         </ScrollReveal>
 
         {/* Feature Cards Grid - Option A Adaptive proportions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 lg:gap-6 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6 items-stretch">
           {features.map((feat, idx) => {
             const IconComp = feat.Icon;
             return (
