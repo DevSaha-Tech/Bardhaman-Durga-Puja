@@ -1208,5 +1208,182 @@
       "checkInRadius": 150
     },
     "tags": []
+  },
+  {
+    "id": "katwa_7",
+    "name": "Katwa প্যান্ডেল 7",
+    "name_en": "Katwa Pandal 7",
+    "city": "Katwa",
+    "zone": "",
+    "lat": 23.621137, 
+    "lng": 88.119660,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "katwa_8",
+    "name": "Katwa প্যান্ডেল 8",
+    "name_en": "Katwa Pandal 8",
+    "city": "Katwa",
+    "zone": "",
+    "lat": 23.626692, 
+    "lng": 88.120349,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "katwa_9",
+    "name": "Katwa প্যান্ডেল 9",
+    "name_en": "Katwa Pandal 9",
+    "city": "Katwa",
+    "zone": "",
+    "lat": 23.628760, 
+    "lng": 88.120971,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "katwa_10",
+    "name": "Katwa প্যান্ডেল 10",
+    "name_en": "Katwa Pandal 10",
+    "city": "Katwa",
+    "zone": "",
+    "lat": 23.628549, 
+    "lng": 88.124830,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "katwa_11",
+    "name": "Katwa প্যান্ডেল 11",
+    "name_en": "Katwa Pandal 11",
+    "city": "Katwa",
+    "zone": "",
+    "lat": 23.629373, 
+    "lng": 88.126784,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "katwa_12",
+    "name": "Katwa প্যান্ডেল 12",
+    "name_en": "Katwa Pandal 12",
+    "city": "Katwa",
+    "zone": "",
+    "lat": 23.633175, 
+    "lng": 88.126067,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "katwa_13",
+    "name": "Katwa প্যান্ডেল 13",
+    "name_en": "Katwa Pandal 13",
+    "city": "Katwa",
+    "zone": "",
+    "lat": 23.637298, 
+    "lng": 88.126196,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "katwa_14",
+    "name": "Katwa প্যান্ডেল 14",
+    "name_en": "Katwa Pandal 14",
+    "city": "Katwa",
+    "zone": "",
+    "lat": 23.640020, 
+    "lng": 88.127950,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "katwa_15",
+    "name": "Katwa প্যান্ডেল 15",
+    "name_en": "Katwa Pandal 15",
+    "city": "Katwa",
+    "zone": "",
+    "lat": 23.642799, 
+    "lng": 88.126873 ,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "katwa_16",
+    "name": "Katwa প্যান্ডেল 16",
+    "name_en": "Katwa Pandal 16",
+    "city": "Katwa",
+    "zone": "",
+    "lat": 23.643731, 
+    "lng": 88.128747 ,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "katwa_17",
+    "name": "Katwa প্যান্ডেল 17",
+    "name_en": "Katwa Pandal 17",
+    "city": "Katwa",
+    "zone": "",
+    "lat": 23.641800, 
+    "lng": 88.128098  ,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
   }
+
 ]
