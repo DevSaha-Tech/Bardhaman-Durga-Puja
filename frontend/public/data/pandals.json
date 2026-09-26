@@ -1384,6 +1384,87 @@
       "checkInRadius": 150
     },
     "tags": []
+  },
+  {
+    "id": "Talit 1",
+    "name": "তালিত ১",
+    "name_en": "Talit 1",
+    "city": "Talit",
+    "zone": "",
+    "lat": 23.291769, 
+    "lng": 87.828596   ,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "Talit 2",
+    "name": "তালিত ২",
+    "name_en": "Talit 2",
+    "city": "Talit",
+    "zone": "",
+    "lat": 23.293295, 
+    "lng": 87.829724   ,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "Talit 3",
+    "name": "তালিত ৩",
+    "name_en": "Talit 3",
+    "city": "Talit",
+    "zone": "",
+    "lat": 23.292295, 
+    "lng": 87.831360  ,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "Talit 4",
+    "name": "তালিত ৪",
+    "name_en": "Talit 4",
+    "city": "Talit",
+    "zone": "",
+    "lat": 23.292117, 
+    "lng": 87.832015   ,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
+  },
+  {
+    "id": "Talit 5",
+    "name": "তালিত ৫",
+    "name_en": "Talit 5",
+    "city": "Talit",
+    "zone": "",
+    "lat": 23.291358, 
+    "lng": 87.830845   ,
+    "rank": 63,
+    "isActive": true,
+    "visit": {
+      "dwellMinutes": 15,
+      "checkInRadius": 150
+    },
+    "tags": []
   }
+
 
 ]

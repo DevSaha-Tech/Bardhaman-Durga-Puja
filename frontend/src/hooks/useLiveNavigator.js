@@ -26,6 +26,8 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
   const [currentStepInitialDist, setCurrentStepInitialDist] = useState(0);
   const [liveRemainingMeters, setLiveRemainingMeters] = useState(0);
   const lastSpokenStepIndexRef = useRef(-1);
+  const nextManeuverNotifiedRef = useRef(false);
+  const nextManeuverWarningNotifiedRef = useRef(false);
 
   const { speak: speakPrompt, isVoiceMuted, setIsVoiceMuted, isSpeaking } = useVoice({ lang });
 
@@ -104,6 +106,8 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
     setOsrmError(false);
     setCurrentStepIndex(0);
     lastSpokenStepIndexRef.current = -1;
+    nextManeuverNotifiedRef.current = false;
+    nextManeuverWarningNotifiedRef.current = false;
     requestWakeLock();
 
     // Silent utterance to unlock iOS/browser speech restrictions
@@ -202,7 +206,7 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
       // 2. Ghost Arrival Protection (<= ARRIVAL_RADIUS_METERS for 2 consecutive ticks)
       const nowMs = Date.now();
       const timeSinceLastArrival = nowMs - lastArrivalTimeRef.current;
-      const ARRIVAL_GRACE_MS = 5000;
+      const ARRIVAL_GRACE_MS = 8000;
 
       if (distMeters <= ARRIVAL_RADIUS_METERS && timeSinceLastArrival > ARRIVAL_GRACE_MS) {
         consecutiveArrivalsRef.current += 1;
@@ -245,6 +249,8 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
               ) * 1000);
               setLiveRemainingMeters(stepDist > 20 ? Math.round(stepDist) : fallbackDist);
               lastSpokenStepIndexRef.current = -1;
+              nextManeuverNotifiedRef.current = false;
+              nextManeuverWarningNotifiedRef.current = false;
             }
           } else {
             setOsrmError(true);
@@ -269,9 +275,33 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
             const stepEndLocation = turf.point([endLng, endLat]);
             const distToStepEndMeters = Math.round(turf.distance(rawUserPoint, stepEndLocation) * 1000);
 
+            if (currentStepIndex < steps.length - 1) {
+              const nextManeuverStep = steps[currentStepIndex + 1];
+              const parsedNext = parseManeuver(nextManeuverStep, t);
+
+              if (!parsedNext.skipVoice) {
+                if (distToStepEndMeters >= 80 && distToStepEndMeters <= 120 && !nextManeuverWarningNotifiedRef.current) {
+                  nextManeuverWarningNotifiedRef.current = true;
+                  const toBn = (n) => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+                  const spokenDist = lang === 'bn' ? toBn(distToStepEndMeters) : distToStepEndMeters;
+                  
+                  if (lang === 'bn') {
+                    speakPrompt(`${spokenDist} মিটার পর ${parsedNext.text}`);
+                  } else {
+                    speakPrompt(`In ${spokenDist} meters, ${parsedNext.text}`);
+                  }
+                } else if (distToStepEndMeters >= 15 && distToStepEndMeters <= 30 && !nextManeuverNotifiedRef.current) {
+                  nextManeuverNotifiedRef.current = true;
+                  speakPrompt(parsedNext.text);
+                }
+              }
+            }
+
             if (distToStepEndMeters < ARRIVAL_RADIUS_METERS && currentStepIndex < steps.length - 1) {
               const nextIdx = currentStepIndex + 1;
               setCurrentStepIndex(nextIdx);
+              nextManeuverNotifiedRef.current = false;
+              nextManeuverWarningNotifiedRef.current = false;
               const nextStep = steps[nextIdx];
               setCurrentStepInitialDist(nextStep.distance || 0);
               const parsed = parseManeuver(nextStep, t);
@@ -299,17 +329,26 @@ export function useLiveNavigator(optimizedRoute, lang, t) {
               if (lastSpokenStepIndexRef.current !== nextIdx && parsed) {
                 lastSpokenStepIndexRef.current = nextIdx;
                 const turnDist = Math.round(nextStep.distance || 0);
-                const toBn = (n) => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
-                const spokenDist = lang === 'bn' ? toBn(turnDist) : turnDist;
                 
-                if (lang === 'bn') {
-                  speakPrompt(`${spokenDist} মিটার পর ${parsed.text}`);
-                } else {
-                  speakPrompt(`In ${spokenDist} meters, ${parsed.text}`);
+                if (!parsed.skipVoice && turnDist > 0) {
+                  const toBn = (n) => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+                  const spokenDist = lang === 'bn' ? toBn(turnDist) : turnDist;
+                  
+                  if (lang === 'bn') {
+                    speakPrompt(`${spokenDist} মিটার পর ${parsed.text}`);
+                  } else {
+                    speakPrompt(`In ${spokenDist} meters, ${parsed.text}`);
+                  }
                 }
               }
             } else {
-              setLiveRemainingMeters(distToStepEndMeters);
+              setLiveRemainingMeters(prev => {
+                if (prev > 0 && distToStepEndMeters > 1.2 * prev) {
+                  console.warn('Blocked jump in liveRemainingMeters from', prev, 'to', distToStepEndMeters);
+                  return prev;
+                }
+                return distToStepEndMeters;
+              });
             }
           }
         }

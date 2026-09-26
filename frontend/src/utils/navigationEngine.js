@@ -181,27 +181,42 @@ export function snapToRoute(rawCoords, geojsonLine) {
 //  Parse maneuver from OSRM or Valhalla step
 // ============================================================
 export function parseManeuver(step, t) {
-  if (!step || !step.maneuver) return { text: t('straight'), icon: 'ArrowUp' };
+  if (!step || !step.maneuver) return { text: t('straight'), icon: 'ArrowUp', skipVoice: true };
 
   const modifier = step.maneuver.modifier;
   const type     = step.maneuver.type;
 
-  if (type === 'arrive') return { text: t('straight'), icon: 'ArrowUp' };
+  let skipVoice = false;
+  if (step.distance < 15 && (type === 'continue' || type === 'straight' || modifier === 'straight')) {
+    skipVoice = true;
+  }
+
+  if (type === 'arrive') return { text: t('straight'), icon: 'ArrowUp', skipVoice };
+
+  let result = { text: t('straight'), icon: 'ArrowUp' };
 
   switch (modifier) {
     case 'left':
     case 'sharp left':
     case 'slight left':
-      return { text: t('turn_left'),  icon: 'CornerUpLeft'  };
+      result = { text: t('turn_left'),  icon: 'CornerUpLeft'  };
+      break;
     case 'right':
     case 'sharp right':
     case 'slight right':
-      return { text: t('turn_right'), icon: 'CornerUpRight' };
+      result = { text: t('turn_right'), icon: 'CornerUpRight' };
+      break;
     case 'straight':
-      return { text: t('straight'), icon: 'ArrowUp' };
+      result = { text: t('straight'), icon: 'ArrowUp' };
+      break;
     case 'uturn':
-      return { text: t('uturn'), icon: 'CornerDownLeft' };
+      result = { text: t('uturn'), icon: 'CornerDownLeft' };
+      break;
     default:
-      return { text: t('straight'), icon: 'ArrowUp' };
+      result = { text: t('straight'), icon: 'ArrowUp' };
+      break;
   }
+
+  result.skipVoice = skipVoice;
+  return result;
 }
